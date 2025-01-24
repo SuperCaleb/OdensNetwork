@@ -1,0 +1,301 @@
+import requests
+import os
+import time
+
+
+api_key = os.getenv("MIMO_OPENAI_API_KEY")
+url = "https://ai.mimo.org/v1/openai/message"
+headers = {"api-key": api_key}
+
+def send_message(user_message, thread_id):
+    body = {"message": user_message}
+    if thread_id:
+        body["threadId"] = thread_id
+    response = requests.post(url, headers=headers, json=body)
+    return response.json()
+
+current_thread_id = None
+GPT = Oden = True
+print("Oden")
+print("Welcome! Type your message and press Enter to send.")
+print("Type 'activate' to start the security defense program.")
+print("Type 'safetylock' to lock Oden's defense system.")
+print("Oden_Paradox, Oden is online:")
+Oden_Paradox = False  
+if Oden_Paradox == False:  
+    print("Oden is secuirty system offline")
+
+
+
+while True:
+    user_message = input("You: ")
+    if user_message.lower() == "activate":
+        break
+    elif user_message.lower() == "new":
+        current_thread_id = None
+        print("Started a new thread.")
+        continue
+
+    response_data = send_message(user_message, current_thread_id)
+    latest_message = response_data.get("response")
+    current_thread_id = response_data.get("threadId")
+    print(f"Oden: {latest_message}")
+
+print("This is Oden's infinity data collection")
+print("Starting a new thread for you.\n")
+print("Oden's Data collection Online:")
+
+Oden = "Oden's Data Collection"
+Data = True
+
+def Oden_Collection_Of_Data(Odens_Mind):
+    Oden_Collection_Of_Data_var = True
+    Odens_mind = False
+    Odens_mind = "Data's Mind"
+    if not Oden_Collection_Of_Data_var:
+        print("Data's encryption")
+
+class Odens_Data_clearance:
+    Odens_Infinty_collection = "Death's Storage"
+    Erase_O = Odens_Infinty_collection == "Data's Mind"
+    
+    @staticmethod
+    def check_clearance():
+        if Odens_Data_clearance.Erase_O:
+            print("Oden's Compromised your system for attempting to breakthrough")
+
+Odens_Data_clearance.check_clearance()
+
+O_System_security = ["Protected Compromised Data."]
+Oden_Collection_Of_Data_var = False
+if Oden_Collection_Of_Data_var:
+    print("Collecting data...")
+
+Data = O_System_security and not Odens_Data_clearance.Erase_O
+
+Odens_Protection = ["Encrypt", "Transmit", "Delete", "Terminate"]
+if Odens_Protection and Data:
+    print("Oden's protection system activated")
+
+Oden_Palace_var = True
+if not Oden_Palace_var:
+    print("Oden's Palace Activated")
+time.sleep(10)
+
+Oden_Collection_Of_Data_value = "Data's protection"
+O_Infinty = [Oden_Collection_Of_Data_value] + O_System_security
+
+if O_Infinty and O_System_security:
+    print("O_secuirty Online:")
+
+Data = O_System_security and not (Erase_O := False)
+
+def Oden_analyze(O_information):
+    O_encryption = (100.00, "data encryption completed")
+Oden_analyze(True)
+
+for Process in range(10):
+    print(f"{Process * 10}% Process completed...")
+
+
+
+    
+
+
+    Oden_Paradox = ["Paradox", "Upon Completion","O_Code"]
+    def Paradox(O_unlimited):
+        Paradox = 12831912990129
+        O_unlimited = inf
+        O_unlimited = Paradox in (Oden_Paradox)
+
+
+
+    def Sol(Sol_Program):
+        Sol and  Sol_Program == True
+        Sol = "Program has gone offline"
+        Sol_Program = ("Sun_Technology")
+        print(f"{Sol} program is offline:")
+
+
+        
+class TheSunProgram:
+    def Suns(Radiation):
+        for i in range(20):
+            Radiation = i
+
+while True:
+    def Sun_Technology():
+        print(f"{Sun_Technology} Advanced Program activation:")
+Radiation_value = TheSunProgram.Suns(5)
+
+
+
+class O_Variant:
+    Variant_z = [50] 
+for varient_b in range(30):
+    if variant_b and variant_c == True:
+        print("load"  "data")
+Variant_z = O_Variant.varient_b(10)
+
+
+
+
+response_data = send_message(user_message, current_thread_id)
+print(response_data)  # Debugging line to inspect response structure
+latest_message = response_data.get("response")
+current_thread_id = response_data.get("threadId")
+print(f"GPT: {latest_message}")
+
+
+Odens_mind = {
+    'thoughts': ["idea1", "idea2", "idea3"],
+    'memories': ["memory1", "memory2"]
+}
+
+print(Odens_mind['thoughts'])
+
+
+
+def Oden_SunTech():
+    create_suntech = ["SunTech", "Moontech"]
+    create_suntech.append("Solardata")
+    print(create_suntech)
+    collect_solar_data.Oden_SunTech = True
+
+
+
+
+    
+    def Automation(Automation_bot):
+        Automation =  ("Automation Bot Online:")
+Automation_bot.enable == True 
+print(f"{Automation}, I'm here to automate data and analyze security and AI system")
+
+Automate.Oden_Collection_Of_Data <= Oden
+if Oden == True:  
+    print(f"{Automate} Automate data through Oden_Collection_of_Data")
+else: 
+    print(Automate.Oden_Collection_Of_Data == True)
+
+    print(Automation.Oden_analyze, "Analyze data on local network")
+
+
+
+    import requests
+
+url = "https://api.nasa.gov/planetary/sun"
+params = {"api_key": "YOUR_API_KEY"}
+response = requests.get(url, params=params)
+sun_data = response.json()
+
+import pandas as pd
+
+df = pd.DataFrame(sun_data)
+df.describe()  # Perform descriptive statistics
+
+import matplotlib.pyplot as plt
+
+plt.plot(df['date'], df['sunspot_count'])
+plt.xlabel('Date')
+plt.ylabel('Sunspot Count')
+plt.title('Sunspot Activity Over Time')
+
+
+
+
+
+
+import matplotlib.pyplot as plt
+
+plt.plot(df['date'], df['sunspot_count'])
+plt.xlabel('Date')
+plt.ylabel('Sunspot Count')
+plt.title('Sunspot Activity Over Time')
+plt.show()
+
+from astroquery.jplhorizons import Horizons
+from astropy.time import Time
+
+# Define the Moon's identifier
+moon_id = '301'  # ID for the Moon in the JPL Horizons database
+
+# Set the time range for which to fetch data
+time_range = Time(['2024-01-01', '2025-01-01'])  # example dates
+
+# Create Horizons object for the Moon
+obj = Horizons(id=moon_id, location='500@399', epochs=time_range.jd)
+
+
+
+
+import cv2
+
+# Initialize video capture
+cap = cv2.VideoCapture(0)
+
+# continuation of existing code
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+
+
+
+
+
+
+def DailyData_tracking(trackingWorld_events):
+    trackingWorld_events = ["Follow tracking Data events from USA, Spain, Russia, China, Ukraine, United Kingdom."]
+    DailyData_tracking = ("Observe human interactions between object, country, city, and state.")
+    DailyData_tracking.trackingWorld_events = input(Odens_mind)
+    DailyData_tracking == True
+    if DailyData_tracking == False:
+        print("Data tracking will be limited to a country, zip code, city level.")
+
+
+
+
+def DailyData_tracking(trackingWorld_events):
+    trackingWorld_events = ["Follow tracking Data events from USA, Spain, Russia, China, Ukraine, United Kingdom."]
+    DailyData_tracking = ("Observe human interactions between object, country, city, and state.")
+    DailyData_tracking.trackingWorld_events = input(Odens_mind)
+    DailyData_tracking == True
+    if DailyData_tracking == False:
+        print("Data tracking will be limited to a country, zip code, city level.")
+
+import requests
+
+API_KEY = 'your_api_key_here'
+CITIES = {
+    'USA': 'Washington',
+    'Russia': 'Moscow',
+    'China': 'Beijing',
+    'Ukraine': 'Kyiv'
+}
+
+# Corrected code segment continues below
+
+import time
+
+def process_data():
+    # Simulated data processing
+    print("Processing data...")
+    time.sleep(2)  # Simulate time-consuming task
+    print("Data processing complete.")
+
+def send_report():
+    # Simulated report sending
+    print("Sending report...")
+    time.sleep(1)  # Simulate time delay
+    print("Report sent successfully.")
+
+def oden_automation():
+    print("Starting Oden automation sequence...")
+    process_data()
+    send_report()
+    print("Oden automation sequence complete.")
+
+if __name__ == "__main__":
+    oden_automation()
+
