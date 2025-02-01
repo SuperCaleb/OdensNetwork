@@ -5,6 +5,9 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 class OdenNetwork:
+    """
+    Simulates a network system with tracking capabilities.
+    """
     def __init__(self, tracking_system):
         self.tracking_system = tracking_system
         logging.debug("Network loading...")
@@ -12,14 +15,26 @@ class OdenNetwork:
         logging.debug("Network loaded")
 
     def o_router(self, router_storage_box):
+        """
+        Logs messages based on the tracking system status.
+        
+        Parameters:
+        router_storage_box (str): Name of the router storage box.
+        """
         if self.tracking_system:
             logging.debug(f"Collecting from {router_storage_box} ...")
         else:
             logging.debug(f"Tracking data from {OdensMind.oden_collection_of_data}")
 
 def o_root(ip_address):
+    """
+    Logs network access attempts and network information.
+    
+    Parameters:
+    ip_address (str): IP address to connect to.
+    """
     o_root_data = ["permit access, get access to nearby IP Addresses"]
-    o_root_input = input("Enter network information: ")
+    o_root_input = "Network information"  # Replace input call
     logging.debug(f"{o_root_data} Oden's mind is now connecting networking nearby addresses...")
 
     interface = "Ethernet"
@@ -29,6 +44,9 @@ def o_root(ip_address):
     logging.debug(f"IP Range: {ip_range}")
 
 def load_data():
+    """
+    Logs a data loading message.
+    """
     logging.debug("Loading data...")
 
 # Example usage
