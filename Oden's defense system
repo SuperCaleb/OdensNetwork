@@ -5,6 +5,9 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 class OdenSystem:
+    """
+    Simulates a defense system with various security-related methods.
+    """
     def __init__(self):
         self.oden_palace = True
         self.o_system_security = ["Protected Compromised Data."]
@@ -13,20 +16,35 @@ class OdenSystem:
         self.erase_o = False
 
     def check_palace(self):
+        """
+        Checks and logs the activation status of Oden's Palace.
+        """
         if not self.oden_palace:
             logging.debug("Oden's Palace Activated")
         else:
             logging.debug("Oden's Palace is already active")
 
     def activate_security(self):
+        """
+        Activates and logs the security system status.
+        """
         if self.o_infinity and self.o_system_security:
             logging.debug("O_security Online")
 
     def analyze_data(self, o_information):
+        """
+        Analyzes and logs the data encryption status.
+        
+        Parameters:
+        o_information (bool): Information to be analyzed (not used in current implementation).
+        """
         o_encryption = (100.00, "data encryption completed")
         logging.debug(o_encryption)
 
     def process_data(self):
+        """
+        Processes data and logs the progress.
+        """
         for process in range(10):
             logging.debug(f"{process * 10}% Process completed...")
             time.sleep(1)
