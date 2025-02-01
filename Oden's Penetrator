@@ -1,20 +1,40 @@
 import time
+import logging
 
-def Penetration(pen_test, network_breakthrough, ip_range, O_root, Oden_Collection_Of_Data, Odens_mind):
-    Penetration = [f"decode local router, {ip_range}, {O_root}", time.sleep(0.5)]
-    pen_test = "Target signaling, networks,\nBuild logs into local networking IP addresses."
-    network_breakthrough = Oden_Collection_Of_Data in Odens_mind
-    
-    if pen_test != True:
-        print(pen_test, "is being processed....")
-    elif network_breakthrough:
-        print(pen_test, "Networking database has been retrieved, completed.")
-        Penetration.pen_test = "Signaling information." in network_breakthrough
+# Setting up logging configuration
+logging.basicConfig(level=logging.DEBUG)
+
+class OdenNetwork:
+    def __init__(self, tracking_system):
+        self.tracking_system = tracking_system
+        logging.debug("Network loading...")
+        time.sleep(0.5)
+        logging.debug("Network loaded")
+
+    def o_router(self, router_storage_box):
+        if self.tracking_system:
+            logging.debug(f"Collecting from {router_storage_box} ...")
+        else:
+            logging.debug(f"Tracking data from {OdensMind.oden_collection_of_data}")
+
+def o_root(ip_address):
+    o_root_data = ["permit access, get access to nearby IP Addresses"]
+    o_root_input = input("Enter network information: ")
+    logging.debug(f"{o_root_data} Oden's mind is now connecting networking nearby addresses...")
+
+    interface = "Ethernet"
+    ip_range = ip_address
+
+    logging.debug(f"Network interface: {interface}")
+    logging.debug(f"IP Range: {ip_range}")
+
+def load_data():
+    logging.debug("Loading data...")
 
 # Example usage
-ip_range = "192.168.1.0/24"
-O_root = "Root Access"
-Oden_Collection_Of_Data = "Sample Data"
-Odens_mind = ["Sample Data", "Other Data"]
-
-Penetration("Initial Test", False, ip_range, O_root, Oden_Collection_Of_Data, Odens_mind)
+tracking_system = ["setting up tracking system to track Oden_network router's"]
+OdensMind = type('OdensMind', (object,), {'oden_collection_of_data': "136.226.79.31"})()
+network = OdenNetwork(tracking_system)
+network.o_router("Router Storage Box")
+o_root("193.186.4.206")
+load_data()
