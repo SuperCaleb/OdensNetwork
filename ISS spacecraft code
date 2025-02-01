@@ -1,14 +1,14 @@
 import time
 import math 
 import logging
-import schedule 
+
 
 # Observing the international space craft code.
 class Spacecraft:
   Spacecraft_observation = ("Observing rotation of earth axis of space.")
   Roating_AxisY = ("Pointing Axis towards - Y" ), (4.576 / 17122)
   print(Roating_AxisY)
-  RotatingAxisX = (4.756 / 17122)
+  RotatingAxisX = "Pointing Axis towards - X", (4.756 / 17122)
   print(RotatingAxisX)
   
   
@@ -23,7 +23,7 @@ class Spacecraft:
   
   # Now tracking Ground-Point of ISS Spacraft.
   def Ground_Point():
-    Ground_Point_schedule = 2.0-3.54
-      
-    Ground_Point_schedule.every(1).minutes.do(Ground_Point)
-
+    Ground_Point = 2.0-3.54
+    time.sleep(5)
+    print(Ground_Point())
+    
