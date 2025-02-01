@@ -1,33 +1,35 @@
 import time
-import math
 import logging
 
+# Setting up logging configuration
+logging.basicConfig(level=logging.DEBUG)
 
-# Observing the international space craft code.
-class Spacecraft:
-    Spacecraft_observation = ("Observing rotation of earth axis of space.")
-    Roating_AxisY = ("Pointing Axis towards - Y"), (4.576 / 17122)
-    axis_y_direction, axis_y_value = Roating_AxisY
-    print(axis_y_direction)
-    print(axis_y_value)
-    RotatingAxisX = "Pointing Axis towards - X", (4.756 / 17122)
-    axis_x_direction, axis_x_value = RotatingAxisX
-    print(axis_x_direction)
-    print(axis_x_value)
+class ISSPositions:
+    def __init__(self):
+        self.iss_position_math = 4.576 / 17122
+        logging.debug(f"ISS Position Math: {self.iss_position_math}")
 
+    def display_position(self):
+        print(f"ISS Position Math: {self.iss_position_math}")
 
+class TrackingTest:
+    def __init__(self):
+        self.ground_points = [(23.25 - 52.17, 90.96 - 100.26) for _ in range(5)]
 
-    class ISS_Positions:
-        logging.debug = ("Possibly errors.")
-        logging.ISS_Position_math = (4.576 / 17122)
-        print(logging.ISS_Position_math)
+    def ground_point(self, ground_point_1):
+        x, y = ground_point_1
+        print(f"Ground Point: ({x}, {y})")
 
-    # Now tracking Ground-Point of ISS Spacecraft.
-    class Tracking_Test:
-        def Ground_Point(Ground_Point_1):
-            Ground_Point_1 = (23.25-52.17, 90.96-100.26)
-            x, y = Ground_Point_1
-            print(f"Ground Point: ({x}, {y})")
+    def track_ground_points(self):
         time.sleep(2)
-        for Ground_Point_1 in range(5):
-            print(f"{Ground_Point_1} gathering data...")
+        for idx, ground_point in enumerate(self.ground_points):
+            print(f"Gathering data for Ground Point {idx + 1}:")
+            self.ground_point(ground_point)
+            time.sleep(1)
+
+# Example usage
+iss_positions = ISSPositions()
+iss_positions.display_position()
+
+tracking_test = TrackingTest()
+tracking_test.track_ground_points()
