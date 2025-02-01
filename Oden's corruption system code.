@@ -1,0 +1,37 @@
+import time
+
+class StrikingHack:
+    def __init__(self):
+        self.penetrator = "Penetration system activated."
+        self.counterattack = [1, 5, 500, 10000, 500000, 100000]
+        self.written_counter = f"{self.counterattack} has been written and activated."
+        self.system_corruption = ("Corrupting system...", [50.0, 80.0, 100.0])
+        self.corruption_active = True
+
+    def check_system(self):
+        time.sleep(5)
+        if not self.corruption_active:
+            print("System no longer corrupts.")
+        elif self.written_counter:
+            print(f"{self.counterattack} initiating counter...")
+        else:
+            print("It has been written.")
+
+    def activate_penetration(self):
+        print(self.penetrator)
+
+    def initiate_counterattack(self):
+        print(self.written_counter)
+
+    def corrupt_system(self):
+        print(self.system_corruption[0])
+        for value in self.system_corruption[1]:
+            print(f"Corruption level: {value}%")
+            time.sleep(1)
+
+# Example usage
+hack = StrikingHack()
+hack.activate_penetration()
+hack.corrupt_system()
+hack.check_system()
+hack.initiate_counterattack()
