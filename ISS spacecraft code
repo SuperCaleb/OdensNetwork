@@ -1,29 +1,33 @@
 import time
-import math 
+import math
 import logging
 
 
 # Observing the international space craft code.
 class Spacecraft:
-  Spacecraft_observation = ("Observing rotation of earth axis of space.")
-  Roating_AxisY = ("Pointing Axis towards - Y" ), (4.576 / 17122)
-  print(Roating_AxisY)
-  RotatingAxisX = "Pointing Axis towards - X", (4.756 / 17122)
-  print(RotatingAxisX)
-  
-  
-  def ISS_Positions():
-    logging.debug = ("Possibly erros.")
-    logging.ISS_Position_math = (4.576 /  17122)
-    return
-    print(ISS_Position_math)
-  
+    Spacecraft_observation = ("Observing rotation of earth axis of space.")
+    Roating_AxisY = ("Pointing Axis towards - Y"), (4.576 / 17122)
+    axis_y_direction, axis_y_value = Roating_AxisY
+    print(axis_y_direction)
+    print(axis_y_value)
+    RotatingAxisX = "Pointing Axis towards - X", (4.756 / 17122)
+    axis_x_direction, axis_x_value = RotatingAxisX
+    print(axis_x_direction)
+    print(axis_x_value)
 
-  
-  
-  # Now tracking Ground-Point of ISS Spacraft.
-  def Ground_Point():
-    Ground_Point = 2.0-3.54
-    time.sleep(5)
-    print(Ground_Point())
-    
+
+
+    class ISS_Positions:
+        logging.debug = ("Possibly errors.")
+        logging.ISS_Position_math = (4.576 / 17122)
+        print(logging.ISS_Position_math)
+
+    # Now tracking Ground-Point of ISS Spacecraft.
+    class Tracking_Test:
+        def Ground_Point(Ground_Point_1):
+            Ground_Point_1 = (23.25-52.17, 90.96-100.26)
+            x, y = Ground_Point_1
+            print(f"Ground Point: ({x}, {y})")
+        time.sleep(2)
+        for Ground_Point_1 in range(5):
+            print(f"{Ground_Point_1} gathering data...")
