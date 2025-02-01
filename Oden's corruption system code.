@@ -1,6 +1,13 @@
 import time
+import logging
+
+# Setting up logging configuration
+logging.basicConfig(level=logging.DEBUG)
 
 class StrikingHack:
+    """
+    Simulates a system corruption and counterattack mechanism.
+    """
     def __init__(self):
         self.penetrator = "Penetration system activated."
         self.counterattack = [1, 5, 500, 10000, 500000, 100000]
@@ -9,24 +16,36 @@ class StrikingHack:
         self.corruption_active = True
 
     def check_system(self):
+        """
+        Checks the system's corruption status and logs appropriate messages.
+        """
         time.sleep(5)
         if not self.corruption_active:
-            print("System no longer corrupts.")
+            logging.debug("System no longer corrupts.")
         elif self.written_counter:
-            print(f"{self.counterattack} initiating counter...")
+            logging.debug(f"{self.counterattack} initiating counter...")
         else:
-            print("It has been written.")
+            logging.debug("It has been written.")
 
     def activate_penetration(self):
-        print(self.penetrator)
+        """
+        Activates the penetration system and logs the message.
+        """
+        logging.debug(self.penetrator)
 
     def initiate_counterattack(self):
-        print(self.written_counter)
+        """
+        Initiates the counterattack and logs the message.
+        """
+        logging.debug(self.written_counter)
 
     def corrupt_system(self):
-        print(self.system_corruption[0])
+        """
+        Corrupts the system and logs the corruption levels.
+        """
+        logging.debug(self.system_corruption[0])
         for value in self.system_corruption[1]:
-            print(f"Corruption level: {value}%")
+            logging.debug(f"Corruption level: {value}%")
             time.sleep(1)
 
 # Example usage
