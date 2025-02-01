@@ -4,22 +4,33 @@ import logging
 # Setting up logging configuration
 logging.basicConfig(level=logging.DEBUG)
 
-def penetration(pen_test, network_breakthrough, ip_range, o_root, oden_collection_of_data, odens_mind):
-    logging.debug(f"Starting penetration test with IP range: {ip_range} and root access: {o_root}")
+def penetration(pen_test_status, has_network_breakthrough, ip_range, root_access, collected_data, data_repository):
+    """
+    Simulates a penetration test with logging of various steps.
+
+    Parameters:
+    pen_test_status (str): Status or name of the penetration test.
+    has_network_breakthrough (bool): Flag to indicate if network breakthrough has been achieved.
+    ip_range (str): The IP range used for the penetration test.
+    root_access (str): Information about root access.
+    collected_data (str): Data collected by the penetration test.
+    data_repository (list): Repository of data for comparison.
+    """
+    logging.debug(f"Starting penetration test with IP range: {ip_range} and root access: {root_access}")
     time.sleep(0.5)
     pen_test_message = "Target signaling, networks,\nBuild logs into local networking IP addresses."
-    network_breakthrough = oden_collection_of_data in odens_mind
+    has_network_breakthrough = collected_data in data_repository
     
-    if pen_test != True:
+    if not pen_test_status:
         logging.debug(f"{pen_test_message} is being processed....")
-    elif network_breakthrough:
+    elif has_network_breakthrough:
         logging.debug(f"{pen_test_message} Networking database has been retrieved, completed.")
-        penetration.pen_test = "Signaling information." in network_breakthrough
+        pen_test_status = "Signaling information." in pen_test_message
 
 # Example usage
 ip_range = "192.168.1.0/24"
-o_root = "Root Access"
-oden_collection_of_data = "Sample Data"
-odens_mind = ["Sample Data", "Other Data"]
+root_access = "Root Access"
+collected_data = "Sample Data"
+data_repository = ["Sample Data", "Other Data"]
 
-penetration("Initial Test", False, ip_range, o_root, oden_collection_of_data, odens_mind)
+penetration("Initial Test", False, ip_range, root_access, collected_data, data_repository)
