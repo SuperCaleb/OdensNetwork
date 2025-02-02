@@ -28,7 +28,7 @@ def penetration(pen_test_status, has_network_breakthrough, ip_range, root_access
         pen_test_status = "Signaling information." in pen_test_message
 
 # Example usage
-ip_range = "192.168.1.0/24"
+ip_range = "192.167.1.0/24"
 root_access = "Root Access"
 collected_data = "Sample Data"
 data_repository = ["Sample Data", "Other Data"]
