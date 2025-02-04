@@ -1,3 +1,7 @@
+import time
+import logging
+
+# Setting up logging configuration
 logging.basicConfig(level=logging.DEBUG)
 
 class OdenNetwork:
@@ -31,12 +35,11 @@ def o_root(ip_address):
     """
     o_root_data = ["permit access, get access to nearby IP Addresses"]
     o_root_input = input("Enter network information: ")
-    o_root_input = "Network information"  # Replace input call
     logging.debug(f"{o_root_data} Oden's mind is now connecting networking nearby addresses...")
 
     interface = "Ethernet"
-     def o_root(ip_address):
-    logging.debug(f"IP Range: {ip_range}")
+    logging.debug(f"Network interface: {interface}")
+    logging.debug(f"IP Range: {ip_address}")
 
 def load_data():
     """
@@ -45,3 +48,9 @@ def load_data():
     logging.debug("Loading data...")
 
 # Example usage
+tracking_system = ["setting up tracking system to track Oden_network router's"]
+OdensMind = type('OdensMind', (object,), {'oden_collection_of_data': "136.226.79.31"})()
+network = OdenNetwork(tracking_system)
+network.o_router("Router Storage Box")
+o_root("193.186.4.206")
+load_data()
