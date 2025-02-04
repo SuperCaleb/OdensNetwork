@@ -16,4 +16,4 @@
 7. Oden's defense system:
 
 
-8. This code primarily serves to log various stages of a defense system, including data clearance, protection activation, and data encryption.
+8. ^ This code primarily serves to log various stages of a defense system, including data clearance, protection activation, and data encryption.
