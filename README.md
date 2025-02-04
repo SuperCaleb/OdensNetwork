@@ -1,1 +1,3 @@
-Oden's weapons are designed for attack, safety, and defense. Oden (entity) contains the entire process for each counterattack, penetration test, and data collection system. If you want to use any of the code, make sure to understand it carefully to know what it can do. Each of Oden's weapons is unique and can be used for its specific purposes. Oden (entity) is recommended for advanced programmers to fully comprehend and utilize its capabilities.
+1. Oden's Data log
+2. ^ This code primarily serves to log network-related activities and simulate a tracking system within a network.
+3. 
