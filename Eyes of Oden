@@ -1,0 +1,57 @@
+import time
+from typing import List, Tuple
+
+class Eye_of_oden:
+    def __init__(self):
+        self.left_sensor_range = (0, 180)  # degrees
+        self.right_sensor_range = (0, 180)  # degrees
+        self.detection_range = (40, 50)  # meters
+        self.is_tracking = False
+        self.detected_objects = []
+
+    def Odens_eyes(self, L_eye: List[str], R_eye: Tuple[str]) -> None:
+        """Main function to control Oden's eyes tracking system"""
+        self.is_tracking = True
+        self.L_eye = L_eye
+        self.R_eye = R_eye
+        self.O_sensor = self.initialize_sensors()
+
+    def initialize_sensors(self) -> Tuple[str, Tuple[int, int]]:
+        """Initialize tracking sensors with detection range"""
+        return (f"Tracking camera vision from {self.detection_range[0]}-{self.detection_range[1]} range", 
+                self.detection_range)
+
+    def object_detector(self) -> List[str]:
+        """Detect and track objects in the field of view"""
+        if not self.is_tracking:
+            return ["Tracking system is offline"]
+
+        detected = []
+        for angle in range(self.left_sensor_range[0], self.left_sensor_range[1], 10):
+            object_status = f"Scanning at {angle}° - Range: {self.detection_range[0]}-{self.detection_range[1]}m"
+            detected.append(object_status)
+            print(f"Detecting movements... {object_status}")
+            time.sleep(0.1)
+
+        self.detected_objects = detected
+        return detected
+
+    def get_sensor_status(self) -> dict:
+        """Return current status of all sensors"""
+        return {
+            "tracking": self.is_tracking,
+            "left_range": self.left_sensor_range,
+            "right_range": self.right_sensor_range,
+            "detection_range": self.detection_range,
+            "objects_detected": len(self.detected_objects)
+        }
+
+# Example usage
+if __name__ == "__main__":
+    eye = Eye_of_oden()
+    eye.Odens_eyes(
+        L_eye=["Tracking", "Eyes", "Of", "Objects"],
+        R_eye=("create motion sensor of data collection from",)
+    )
+    eye.object_detector()
+    print("\nSensor Status:", eye.get_sensor_status())
