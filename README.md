@@ -17,3 +17,8 @@
 
 
 8. ^ This code primarily serves to log various stages of a defense system, including data clearance, protection activation, and data encryption.
+
+
+
+9. Oden's(enity) this is a mini version of Oden.
+10. ^ Demonstrates the usage of various classes and functions to simulate data collection, security checks, network management, penetration testing, and automated processes.
