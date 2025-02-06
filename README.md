@@ -1,3 +1,8 @@
+**Oden's Corruption system is AI inspired attack program the Instructions, will be sent soon as you execute."
+
+
+
+
 1. **Oden's Data Log**:
    - This code primarily serves to log network-related activities and simulate a tracking system within a network.
 
