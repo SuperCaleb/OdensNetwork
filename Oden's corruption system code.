@@ -1,56 +1,95 @@
 import time
 import logging
+from typing import List, Tuple
 
-# Setting up logging configuration
-logging.basicConfig(level=logging.DEBUG)
+# Configure logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class StrikingHack:
     """
-    Simulates a system corruption and counterattack mechanism.
+    Simulates a system corruption and counterattack mechanism with advanced features.
     """
+
     def __init__(self):
         self.penetrator = "Penetration system activated."
         self.counterattack = [1, 5, 500, 10000, 500000, 100000]
         self.written_counter = f"{self.counterattack} has been written and activated."
         self.system_corruption = ("Corrupting system...", [50.0, 80.0, 100.0])
         self.corruption_active = True
+        self.counterattack_active = False
 
-    def check_system(self):
+    def check_system(self) -> None:
         """
         Checks the system's corruption status and logs appropriate messages.
         """
-        time.sleep(5)
+        time.sleep(5)  # Simulate system check delay
         if not self.corruption_active:
-            logging.debug("System no longer corrupts.")
-        elif self.written_counter:
-            logging.debug(f"{self.counterattack} initiating counter...")
+            logging.info("System is no longer corrupt.")
+        elif self.written_counter and not self.counterattack_active:
+            logging.info(f"{self.counterattack} initiating counter...")
+            self.counterattack_active = True
         else:
-            logging.debug("It has been written.")
+            logging.info("System status: Stable.")
 
-    def activate_penetration(self):
+    def activate_penetration(self) -> None:
         """
         Activates the penetration system and logs the message.
         """
-        logging.debug(self.penetrator)
+        logging.info(self.penetrator)
+        self.corruption_active = True
 
-    def initiate_counterattack(self):
+    def initiate_counterattack(self) -> None:
         """
         Initiates the counterattack and logs the message.
         """
-        logging.debug(self.written_counter)
+        if self.counterattack_active:
+            logging.warning("Counterattack is already active.")
+        else:
+            logging.info(self.written_counter)
+            self.counterattack_active = True
 
-    def corrupt_system(self):
+    def corrupt_system(self) -> None:
         """
         Corrupts the system and logs the corruption levels.
         """
-        logging.debug(self.system_corruption[0])
+        if not self.corruption_active:
+            logging.warning("System corruption is not active.")
+            return
+
+        logging.info(self.system_corruption[0])
         for value in self.system_corruption[1]:
-            logging.debug(f"Corruption level: {value}%")
-            time.sleep(1)
+            logging.info(f"Corruption level: {value}%")
+            time.sleep(1)  # Simulate corruption progression
+
+    def reset_system(self) -> None:
+        """
+        Resets the system to its initial state.
+        """
+        self.corruption_active = False
+        self.counterattack_active = False
+        logging.info("System has been reset to its initial state.")
+
+    def simulate_attack(self) -> None:
+        """
+        Simulates a full attack sequence: penetration, corruption, and counterattack.
+        """
+        self.activate_penetration()
+        self.corrupt_system()
+        self.check_system()
+        self.initiate_counterattack()
+        self.reset_system()
+
 
 # Example usage
-hack = StrikingHack()
-hack.activate_penetration()
-hack.corrupt_system()
-hack.check_system()
-hack.initiate_counterattack()
+if __name__ == "__main__":
+    hack = StrikingHack()
+
+    # Simulate a full attack sequence
+    hack.simulate_attack()
+
+    # Manually trigger individual methods (optional)
+    # hack.activate_penetration()
+    # hack.corrupt_system()
+    # hack.check_system()
+    # hack.initiate_counterattack()
+    # hack.reset_system()
