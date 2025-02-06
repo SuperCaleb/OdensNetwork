@@ -1,58 +1,56 @@
 import time
-import logging
 
-# Setting up logging configuration
-logging.basicConfig(level=logging.DEBUG)
-
-def Oden_Collection_Of_Data(odens_mind):
-    oden_collection_of_data_var = True
-    odens_mind = "Data's Mind"
-    if not oden_collection_of_data_var:
-        logging.debug("Data's encryption")
-
-class OdensDataClearance:
+class OdenDataSystem:
     def __init__(self):
-        self.odens_infinity_collection = "Death's Storage"
-        self.erase_o = self.odens_infinity_collection == "Data's Mind"
+        self.oden_collection_of_data_var = True
+        self.odens_mind = "Data's Mind"
+        self.o_system_security = ["Protected Compromised Data."]
+        self.odens_protection = ["Encrypt", "Transmit", "Delete", "Terminate"]
+        self.oden_palace = True
+        self.oden_collection_of_data_value = "Data's protection"
+        self.o_infinity = [self.oden_collection_of_data_value] + self.o_system_security
+
+    def oden_collection_of_data(self):
+        if not self.oden_collection_of_data_var:
+            print("Data's encryption")
+        else:
+            print("Collecting data...")
 
     @staticmethod
     def check_clearance():
-        if OdensDataClearance().erase_o:
-            logging.debug("Oden's Compromised your system for attempting to breakthrough")
+        odens_infinity_collection = "Death's Storage"
+        erase_o = odens_infinity_collection == "Data's Mind"
+        if erase_o:
+            print("Oden's Compromised your system for attempting to breakthrough")
 
-# Example usage
-OdensDataClearance.check_clearance()
+    def activate_protection_system(self):
+        data = self.o_system_security and not self.check_clearance()
+        if self.odens_protection and data:
+            print("Oden's protection system activated")
 
-o_system_security = ["Protected Compromised Data."]
-oden_collection_of_data_var = False
-if oden_collection_of_data_var:
-    logging.debug("Collecting data...")
+    def activate_oden_palace(self):
+        if not self.oden_palace:
+            print("Oden's Palace Activated")
+        else:
+            print("Oden's Palace is already active")
 
-data = o_system_security and not OdensDataClearance().erase_o
+    def analyze_data(self, o_information):
+        o_encryption = (100.00, "data encryption completed")
+        print(o_encryption[1])
 
-odens_protection = ["Encrypt", "Transmit", "Delete", "Terminate"]
-if odens_protection and data:
-    logging.debug("Oden's protection system activated")
+    def process_data(self):
+        for process in range(10):
+            print(f"{process * 10}% Process completed...")
+            time.sleep(1)
 
-oden_palace = True
-if not oden_palace:
-    logging.debug("Oden's Palace Activated")
-time.sleep(10)
+    def run_system(self):
+        self.oden_collection_of_data()
+        self.check_clearance()
+        self.activate_protection_system()
+        self.activate_oden_palace()
+        self.analyze_data(True)
+        self.process_data()
 
-oden_collection_of_data_value = "Data's protection"
-o_infinity = [oden_collection_of_data_value] + o_system_security
-
-if o_infinity and o_system_security:
-    logging.debug("O_security Online")
-
-data = o_system_security and not (erase_o := False)
-
-def Oden_analyze(o_information):
-    o_encryption = (100.00, "data encryption completed")
-    logging.debug(o_encryption)
-
-Oden_analyze(True)
-
-for process in range(10):
-    logging.debug(f"{process * 10}% Process completed...")
-    time.sleep(1)
+# Instantiate and run the system
+oden_system = OdenDataSystem()
+oden_system.run_system()
