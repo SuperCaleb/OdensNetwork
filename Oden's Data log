@@ -1,56 +1,148 @@
-import time
 import logging
-
-# Setting up logging configuration
-logging.basicConfig(level=logging.DEBUG)
+import time
+import ipaddress
+import threading
+import queue
+import random
+from cryptography.fernet import Fernet
 
 class OdenNetwork:
     """
-    Simulates a network system with tracking capabilities.
+    Simulates an advanced network system with tracking, encryption, and multi-threading capabilities.
     """
     def __init__(self, tracking_system):
         self.tracking_system = tracking_system
-        logging.debug("Network loading...")
-        time.sleep(0.5)
-        logging.debug("Network loaded")
+        self.encryption_key = Fernet.generate_key()
+        self.cipher_suite = Fernet(self.encryption_key)
+        self.router_queue = queue.Queue()
+        self.is_running = True
+        logging.info("Network initializing...")
+        self._initialize_network()
 
-    def o_router(self, router_storage_box):
+    def _initialize_network(self):
+        """Initialize network components."""
+        time.sleep(0.5)
+        self.start_router_thread()
+        logging.info("Network initialized and operational")
+
+    def start_router_thread(self):
+        """Start a separate thread for router operations."""
+        self.router_thread = threading.Thread(target=self._router_worker)
+        self.router_thread.start()
+
+    def _router_worker(self):
+        """Worker function for router thread."""
+        while self.is_running:
+            try:
+                router_task = self.router_queue.get(timeout=1)
+                self._process_router_task(router_task)
+                self.router_queue.task_done()
+            except queue.Empty:
+                continue
+
+    def _process_router_task(self, task):
+        """Process a router task."""
+        router_storage_box, data = task
+        encrypted_data = self.encrypt_data(data)
+        if self.tracking_system:
+            logging.info(f"Processing encrypted data from {router_storage_box}: {encrypted_data}")
+        else:
+            logging.info(f"Tracking encrypted data: {encrypted_data}")
+
+    def o_router(self, router_storage_box, data):
         """
-        Logs messages based on the tracking system status.
+        Queue router tasks for processing.
         
         Parameters:
         router_storage_box (str): Name of the router storage box.
+        data (str): Data to be processed.
         """
-        if self.tracking_system:
-            logging.debug(f"Collecting from {router_storage_box} ...")
-        else:
-            logging.debug(f"Tracking data from {OdensMind.oden_collection_of_data}")
+        self.router_queue.put((router_storage_box, data))
 
-def o_root(ip_address):
+    def encrypt_data(self, data):
+        """Encrypt the given data."""
+        return self.cipher_suite.encrypt(data.encode()).decode()
+
+    def decrypt_data(self, encrypted_data):
+        """Decrypt the given data."""
+        return self.cipher_suite.decrypt(encrypted_data.encode()).decode()
+
+    def shutdown(self):
+        """Gracefully shut down the network."""
+        self.is_running = False
+        self.router_thread.join()
+        logging.info("Network shut down successfully")
+
+class OdensMind:
+    """Represents the central intelligence of the Oden network."""
+    def __init__(self):
+        self.oden_collection_of_data = {}
+        self.network_map = {}
+
+    def add_data(self, key, value):
+        """Add data to Oden's mind."""
+        self.oden_collection_of_data[key] = value
+
+    def map_network(self, ip_address):
+        """Map the network starting from the given IP address."""
+        network = ipaddress.ip_network(ip_address, strict=False)
+        for ip in network.hosts():
+            self.network_map[str(ip)] = self._simulate_device()
+
+    def _simulate_device(self):
+        """Simulate a network device."""
+        device_types = ['Router', 'Switch', 'Firewall', 'Server', 'Workstation']
+        return random.choice(device_types)
+
+def o_root(ip_address, odens_mind):
     """
-    Logs network access attempts and network information.
+    Simulates root access and network mapping.
     
     Parameters:
-    ip_address (str): IP address to connect to.
+    ip_address (str): IP address to start mapping from.
+    odens_mind (OdensMind): Instance of OdensMind to store mapping data.
     """
-    o_root_data = ["permit access, get access to nearby IP Addresses"]
-    o_root_input = input("Enter network information: ")
-    logging.debug(f"{o_root_data} Oden's mind is now connecting networking nearby addresses...")
+    logging.info(f"Initiating root access for IP: {ip_address}")
+    odens_mind.map_network(ip_address)
+    logging.info(f"Network mapping complete. Devices found: {len(odens_mind.network_map)}")
 
-    interface = "Ethernet"
-    logging.debug(f"Network interface: {interface}")
-    logging.debug(f"IP Range: {ip_address}")
+    for ip, device_type in odens_mind.network_map.items():
+        logging.info(f"Device at {ip}: {device_type}")
 
-def load_data():
+def load_data(network, odens_mind):
     """
-    Logs a data loading message.
+    Load sample data into the network and Oden's mind.
+    
+    Parameters:
+    network (OdenNetwork): Instance of OdenNetwork to load data into.
+    odens_mind (OdensMind): Instance of OdensMind to load data into.
     """
-    logging.debug("Loading data...")
+    logging.info("Loading data into network and Oden's mind...")
+    sample_data = [
+        ("Router1", "192.168.1.1"),
+        ("Switch1", "10.0.0.1"),
+        ("Firewall", "172.16.0.1")
+    ]
+    for device, ip in sample_data:
+        network.o_router(device, f"Data from {ip}")
+        odens_mind.add_data(device, ip)
+    logging.info("Data loading complete")
 
-# Example usage
-tracking_system = ["setting up tracking system to track Oden_network router's"]
-OdensMind = type('OdensMind', (object,), {'oden_collection_of_data': "136.226.79.31"})()
-network = OdenNetwork(tracking_system)
-network.o_router("Router Storage Box")
-o_root("193.186.4.206")
-load_data()
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    
+    odens_mind = OdensMind()
+    network = OdenNetwork(tracking_system=True)
+    
+    try:
+        load_data(network, odens_mind)
+        o_root("192.168.1.0/24", odens_mind)
+        
+        # Simulate some network activity
+        for _ in range(5):
+            network.o_router(f"Router{random.randint(1,5)}", f"Random data {random.randint(1000,9999)}")
+            time.sleep(1)
+    
+    finally:
+        network.shutdown()
+
