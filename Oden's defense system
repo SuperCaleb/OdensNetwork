@@ -1,4 +1,10 @@
 import time
+import random
+import threading
+import asyncio
+import numpy as np
+from cryptography.fernet import Fernet
+from concurrent.futures import ThreadPoolExecutor
 
 class OdenDataSystem:
     def __init__(self):
@@ -9,12 +15,16 @@ class OdenDataSystem:
         self.oden_palace = True
         self.oden_collection_of_data_value = "Data's protection"
         self.o_infinity = [self.oden_collection_of_data_value] + self.o_system_security
+        self.encryption_key = Fernet.generate_key()
+        self.fernet = Fernet(self.encryption_key)
+        self.data_matrix = np.random.rand(1000, 1000)
 
-    def oden_collection_of_data(self):
+    async def oden_collection_of_data(self):
         if not self.oden_collection_of_data_var:
             print("Data's encryption")
         else:
             print("Collecting data...")
+            await asyncio.sleep(2)
 
     @staticmethod
     def check_clearance():
@@ -22,11 +32,13 @@ class OdenDataSystem:
         erase_o = odens_infinity_collection == "Data's Mind"
         if erase_o:
             print("Oden's Compromised your system for attempting to breakthrough")
+        return erase_o
 
     def activate_protection_system(self):
         data = self.o_system_security and not self.check_clearance()
         if self.odens_protection and data:
             print("Oden's protection system activated")
+            self.encrypt_data()
 
     def activate_oden_palace(self):
         if not self.oden_palace:
@@ -37,14 +49,33 @@ class OdenDataSystem:
     def analyze_data(self, o_information):
         o_encryption = (100.00, "data encryption completed")
         print(o_encryption[1])
+        self.data_analysis()
+
+    def data_analysis(self):
+        print("Performing advanced data analysis...")
+        result = np.linalg.svd(self.data_matrix)
+        print("SVD analysis completed.")
+
+    def encrypt_data(self):
+        print("Encrypting sensitive data...")
+        sample_data = b"Sensitive information"
+        encrypted_data = self.fernet.encrypt(sample_data)
+        print(f"Encrypted data: {encrypted_data}")
 
     def process_data(self):
-        for process in range(10):
-            print(f"{process * 10}% Process completed...")
-            time.sleep(1)
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [executor.submit(self.process_chunk, i) for i in range(4)]
+            for future in futures:
+                future.result()
 
-    def run_system(self):
-        self.oden_collection_of_data()
+    def process_chunk(self, chunk_id):
+        for i in range(25):
+            progress = chunk_id * 25 + i
+            print(f"{progress}% Process completed...")
+            time.sleep(random.uniform(0.1, 0.5))
+
+    async def run_system(self):
+        await self.oden_collection_of_data()
         self.check_clearance()
         self.activate_protection_system()
         self.activate_oden_palace()
@@ -52,5 +83,6 @@ class OdenDataSystem:
         self.process_data()
 
 # Instantiate and run the system
-oden_system = OdenDataSystem()
-oden_system.run_system()
+if __name__ == "__main__":
+    oden_system = OdenDataSystem()
+    asyncio.run(oden_system.run_system())
