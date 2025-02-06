@@ -1,36 +1,67 @@
 import time
-import logging
+from typing import List, Union
 
-# Setting up logging configuration
-logging.basicConfig(level=logging.DEBUG)
+class PenetrationTester:
+    def __init__(self, ip_range: str, o_root: str, oden_collection_of_data: str, odens_mind: List[str]):
+        self.ip_range = ip_range
+        self.o_root = o_root
+        self.oden_collection_of_data = oden_collection_of_data
+        self.odens_mind = odens_mind
+        self.penetration_logs = []
 
-def penetration(pen_test_status, has_network_breakthrough, ip_range, root_access, collected_data, data_repository):
-    """
-    Simulates a penetration test with logging of various steps.
+    def decode_local_router(self) -> str:
+        """Simulate decoding the local router."""
+        log_entry = f"Decoding local router, IP Range: {self.ip_range}, Root Access: {self.o_root}"
+        self.penetration_logs.append(log_entry)
+        time.sleep(0.5)  # Simulate processing time
+        return log_entry
 
-    Parameters:
-    pen_test_status (str): Status or name of the penetration test.
-    has_network_breakthrough (bool): Flag to indicate if network breakthrough has been achieved.
-    ip_range (str): The IP range used for the penetration test.
-    root_access (str): Information about root access.
-    collected_data (str): Data collected by the penetration test.
-    data_repository (list): Repository of data for comparison.
-    """
-    logging.debug(f"Starting penetration test with IP range: {ip_range} and root access: {root_access}")
-    time.sleep(0.5)
-    pen_test_message = "Target signaling, networks,\nBuild logs into local networking IP addresses."
-    has_network_breakthrough = collected_data in data_repository
-    
-    if not pen_test_status:
-        logging.debug(f"{pen_test_message} is being processed....")
-    elif has_network_breakthrough:
-        logging.debug(f"{pen_test_message} Networking database has been retrieved, completed.")
-        pen_test_status = "Signaling information." in pen_test_message
+    def target_signaling(self) -> str:
+        """Simulate targeting signaling and networks."""
+        log_entry = "Targeting signaling, networks...\nBuilding logs into local networking IP addresses."
+        self.penetration_logs.append(log_entry)
+        return log_entry
 
-# Example usage
-ip_range = "192.167.1.0/24"
-root_access = "Root Access"
-collected_data = "Sample Data"
-data_repository = ["Sample Data", "Other Data"]
+    def check_network_breakthrough(self) -> bool:
+        """Check if a network breakthrough has occurred."""
+        return self.oden_collection_of_data in self.odens_mind
 
-penetration("Initial Test", False, ip_range, root_access, collected_data, data_repository)
+    def process_penetration(self) -> None:
+        """Process the penetration test."""
+        # Step 1: Decode local router
+        print(self.decode_local_router())
+
+        # Step 2: Target signaling and networks
+        print(self.target_signaling())
+
+        # Step 3: Check for network breakthrough
+        if self.check_network_breakthrough():
+            print("Networking database has been retrieved, completed.")
+            self.penetration_logs.append("Network breakthrough successful.")
+        else:
+            print("Penetration test is being processed...")
+            self.penetration_logs.append("No network breakthrough detected.")
+
+    def get_penetration_logs(self) -> List[str]:
+        """Retrieve the penetration logs."""
+        return self.penetration_logs
+
+
+# Example Usage
+if __name__ == "__main__":
+    # Define inputs
+    ip_range = "192.168.1.0/24"
+    o_root = "Root Access"
+    oden_collection_of_data = "Sample Data"
+    odens_mind = ["Sample Data", "Other Data"]
+
+    # Initialize PenetrationTester
+    penetration_tester = PenetrationTester(ip_range, o_root, oden_collection_of_data, odens_mind)
+
+    # Run the penetration test
+    penetration_tester.process_penetration()
+
+    # Retrieve and print logs
+    print("\nPenetration Logs:")
+    for log in penetration_tester.get_penetration_logs():
+        print(f"- {log}")
