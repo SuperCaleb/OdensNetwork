@@ -1,5 +1,20 @@
 import time
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
+import numpy as np
+from scipy.spatial import KDTree
+import cv2
+import threading
+from queue import Queue
+import logging
+from dataclasses import dataclass, field
+
+@dataclass
+class DetectedObject:
+    id: int
+    position: Tuple[float, float, float]
+    velocity: Tuple[float, float, float]
+    classification: str
+    confidence: float
 
 class Eye_of_oden:
     def __init__(self):
@@ -7,7 +22,21 @@ class Eye_of_oden:
         self.right_sensor_range = (0, 180)  # degrees
         self.detection_range = (40, 50)  # meters
         self.is_tracking = False
-        self.detected_objects = []
+        self.detected_objects: List[DetectedObject] = []
+        self.object_history: Dict[int, List[DetectedObject]] = {}
+        self.tracking_thread: threading.Thread = None
+        self.detection_queue: Queue = Queue()
+        self.kdtree: KDTree = None
+        self.logger = self._setup_logger()
+
+    def _setup_logger(self) -> logging.Logger:
+        logger = logging.getLogger("Eye_of_oden")
+        logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        return logger
 
     def Odens_eyes(self, L_eye: List[str], R_eye: Tuple[str]) -> None:
         """Main function to control Oden's eyes tracking system"""
@@ -15,36 +44,107 @@ class Eye_of_oden:
         self.L_eye = L_eye
         self.R_eye = R_eye
         self.O_sensor = self.initialize_sensors()
+        self.tracking_thread = threading.Thread(target=self._continuous_tracking)
+        self.tracking_thread.start()
+        self.logger.info("Oden's eyes activated and tracking initiated.")
 
-    def initialize_sensors(self) -> Tuple[str, Tuple[int, int]]:
-        """Initialize tracking sensors with detection range"""
-        return (f"Tracking camera vision from {self.detection_range[0]}-{self.detection_range[1]} range", 
-                self.detection_range)
+    def initialize_sensors(self) -> Dict[str, Any]:
+        """Initialize tracking sensors with detection range and additional parameters"""
+        return {
+            "vision_range": f"Tracking camera vision from {self.detection_range[0]}-{self.detection_range[1]} range",
+            "detection_range": self.detection_range,
+            "left_sensor": cv2.VideoCapture(0),  # Assuming left sensor is connected to camera 0
+            "right_sensor": cv2.VideoCapture(1),  # Assuming right sensor is connected to camera 1
+            "lidar_sensor": self._initialize_lidar(),  # Placeholder for LIDAR initialization
+        }
 
-    def object_detector(self) -> List[str]:
-        """Detect and track objects in the field of view"""
-        if not self.is_tracking:
-            return ["Tracking system is offline"]
+    def _initialize_lidar(self) -> Any:
+        # Placeholder for LIDAR sensor initialization
+        # In a real implementation, this would initialize and return a LIDAR sensor object
+        return "LIDAR_SENSOR_OBJECT"
 
-        detected = []
-        for angle in range(self.left_sensor_range[0], self.left_sensor_range[1], 10):
-            object_status = f"Scanning at {angle}° - Range: {self.detection_range[0]}-{self.detection_range[1]}m"
-            detected.append(object_status)
-            print(f"Detecting movements... {object_status}")
+    def _continuous_tracking(self) -> None:
+        while self.is_tracking:
+            detected_objects = self.object_detector()
+            self.detection_queue.put(detected_objects)
+            self._update_object_history(detected_objects)
+            self._update_kdtree()
             time.sleep(0.1)
 
-        self.detected_objects = detected
+    def object_detector(self) -> List[DetectedObject]:
+        """Detect and track objects in the field of view using multiple sensors"""
+        if not self.is_tracking:
+            self.logger.warning("Tracking system is offline")
+            return []
+
+        detected = []
+        object_id = 0
+        
+        # Simulate detection from multiple sensors
+        for angle in np.linspace(self.left_sensor_range[0], self.left_sensor_range[1], 20):
+            distance = np.random.uniform(self.detection_range[0], self.detection_range[1])
+            x = distance * np.cos(np.radians(angle))
+            y = distance * np.sin(np.radians(angle))
+            z = np.random.uniform(-5, 5)  # Simulated height
+            
+            velocity = (np.random.uniform(-5, 5), np.random.uniform(-5, 5), np.random.uniform(-2, 2))
+            classification = np.random.choice(["vehicle", "pedestrian", "animal", "unknown"])
+            confidence = np.random.uniform(0.7, 1.0)
+            
+            detected_object = DetectedObject(
+                id=object_id,
+                position=(x, y, z),
+                velocity=velocity,
+                classification=classification,
+                confidence=confidence
+            )
+            detected.append(detected_object)
+            object_id += 1
+            
+            self.logger.debug(f"Detected: {detected_object}")
+
         return detected
 
-    def get_sensor_status(self) -> dict:
-        """Return current status of all sensors"""
+    def _update_object_history(self, detected_objects: List[DetectedObject]) -> None:
+        for obj in detected_objects:
+            if obj.id not in self.object_history:
+                self.object_history[obj.id] = []
+            self.object_history[obj.id].append(obj)
+            if len(self.object_history[obj.id]) > 100:  # Keep only last 100 positions
+                self.object_history[obj.id].pop(0)
+
+    def _update_kdtree(self) -> None:
+        if self.detected_objects:
+            positions = [obj.position for obj in self.detected_objects]
+            self.kdtree = KDTree(positions)
+
+    def get_nearest_objects(self, position: Tuple[float, float, float], k: int = 5) -> List[DetectedObject]:
+        if self.kdtree is None:
+            return []
+        distances, indices = self.kdtree.query(position, k=k)
+        return [self.detected_objects[i] for i in indices]
+
+    def get_sensor_status(self) -> Dict[str, Any]:
+        """Return current status of all sensors and tracking system"""
         return {
             "tracking": self.is_tracking,
             "left_range": self.left_sensor_range,
             "right_range": self.right_sensor_range,
             "detection_range": self.detection_range,
-            "objects_detected": len(self.detected_objects)
+            "objects_detected": len(self.detected_objects),
+            "object_history_count": len(self.object_history),
+            "detection_queue_size": self.detection_queue.qsize(),
         }
+
+    def shutdown(self) -> None:
+        """Safely shutdown the tracking system"""
+        self.is_tracking = False
+        if self.tracking_thread:
+            self.tracking_thread.join()
+        self.O_sensor["left_sensor"].release()
+        self.O_sensor["right_sensor"].release()
+        cv2.destroyAllWindows()
+        self.logger.info("Eye of Oden shutdown complete.")
 
 # Example usage
 if __name__ == "__main__":
@@ -53,5 +153,16 @@ if __name__ == "__main__":
         L_eye=["Tracking", "Eyes", "Of", "Objects"],
         R_eye=("create motion sensor of data collection from",)
     )
-    eye.object_detector()
-    print("\nSensor Status:", eye.get_sensor_status())
+    
+    try:
+        time.sleep(5)  # Let the system run for 5 seconds
+        print("\nSensor Status:", eye.get_sensor_status())
+        
+        # Example of getting nearest objects to a point
+        nearest_objects = eye.get_nearest_objects((10, 10, 0))
+        print("\nNearest Objects:")
+        for obj in nearest_objects:
+            print(f"  ID: {obj.id}, Position: {obj.position}, Classification: {obj.classification}")
+        
+    finally:
+        eye.shutdown()
