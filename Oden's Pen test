@@ -1,7 +1,8 @@
 import time
 import threading
-from typing import List, Union
+from typing import List, Optional, Dict
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -12,8 +13,13 @@ class PenetrationTester:
         self.o_root = o_root
         self.oden_collection_of_data = oden_collection_of_data
         self.odens_mind = odens_mind
-        self.penetration_logs = []
+        self.penetration_logs: List[str] = []
         self.lock = threading.Lock()
+        self.results: Dict[str, Optional[str]] = {
+            "decode_local_router": None,
+            "target_signaling": None,
+            "network_breakthrough": None
+        }
 
     def decode_local_router(self) -> str:
         """Simulate decoding the local router."""
@@ -37,16 +43,20 @@ class PenetrationTester:
         return self.oden_collection_of_data in self.odens_mind
 
     def process_penetration(self) -> None:
-        """Process the penetration test."""
-        # Step 1: Decode local router
-        decode_thread = threading.Thread(target=self.decode_local_router)
-        decode_thread.start()
-        decode_thread.join()
+        """Process the penetration test using ThreadPoolExecutor for better thread management."""
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {
+                executor.submit(self.decode_local_router): "decode_local_router",
+                executor.submit(self.target_signaling): "target_signaling"
+            }
 
-        # Step 2: Target signaling and networks
-        target_thread = threading.Thread(target=self.target_signaling)
-        target_thread.start()
-        target_thread.join()
+            for future in as_completed(futures):
+                task_name = futures[future]
+                try:
+                    result = future.result()
+                    self.results[task_name] = result
+                except Exception as e:
+                    logging.error(f"Task {task_name} failed with exception: {e}")
 
         # Step 3: Check for network breakthrough
         if self.check_network_breakthrough():
@@ -54,16 +64,22 @@ class PenetrationTester:
             with self.lock:
                 self.penetration_logs.append(breakthrough_log)
             logging.info(breakthrough_log)
+            self.results["network_breakthrough"] = breakthrough_log
         else:
             processing_log = "Penetration test is being processed..."
             with self.lock:
                 self.penetration_logs.append(processing_log)
             logging.info(processing_log)
+            self.results["network_breakthrough"] = processing_log
 
     def get_penetration_logs(self) -> List[str]:
         """Retrieve the penetration logs."""
         with self.lock:
             return self.penetration_logs
+
+    def get_results(self) -> Dict[str, Optional[str]]:
+        """Retrieve the results of the penetration test."""
+        return self.results
 
 
 # Example Usage
@@ -83,4 +99,9 @@ if __name__ == "__main__":
     # Retrieve and print logs
     print("\nPenetration Logs:")
     for log in penetration_tester.get_penetration_logs():
-        print(f"- {log}
+        print(f"{log}")
+
+    # Retrieve and print results
+    print("\nPenetration Results:")
+    for task, result in penetration_tester.get_results().items():
+        print(f"{task}: {result}")
