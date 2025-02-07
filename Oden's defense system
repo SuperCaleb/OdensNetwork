@@ -1,21 +1,8 @@
-import time
+import time 
 import random
 import threading
 import asyncio
 import numpy as np
-import tensorflow as tf
-import pandas as pd
-import matplotlib.pyplot as plt
-from scipy import ndimage
-import torch
-import sklearn.cluster
-import requests
-import PIL.Image
-import pyautogui
-import pygame
-import sqlalchemy
-import nltk
-import spacy
 from cryptography.fernet import Fernet
 from concurrent.futures import ThreadPoolExecutor
 
@@ -30,17 +17,7 @@ class OdenDataSystem:
         self.o_infinity = [self.oden_collection_of_data_value] + self.o_system_security
         self.encryption_key = Fernet.generate_key()
         self.fernet = Fernet(self.encryption_key)
-        self.data_matrix = np.random.rand(10000, 10000)
-        
-        # Heavy initialization blocks
-        self.tf_model = tf.keras.applications.ResNet50()
-        self.pd_frame = pd.DataFrame(np.random.rand(1000000, 100))
-        self.scipy_matrix = ndimage.gaussian_filter(self.data_matrix, sigma=5)
-        self.torch_tensor = torch.rand(10000, 10000, 
-                                    device='cuda' if torch.cuda.is_available() else 'cpu')
-        self.nlp = spacy.load("en_core_web_lg")
-        self.engine = sqlalchemy.create_engine('sqlite:///:memory:')
-        self.kmeans = sklearn.cluster.KMeans(n_clusters=5).fit(self.data_matrix)
+        self.data_matrix = np.random.rand(1000, 1000)
 
     async def oden_collection_of_data(self):
         if not self.oden_collection_of_data_var:
@@ -105,12 +82,7 @@ class OdenDataSystem:
         self.analyze_data(True)
         self.process_data()
 
-# Pre-initialize heavy objects
-SYSTEM_POOL = [OdenDataSystem() for _ in range(5)]
-requests.get('https://httpbin.org/delay/2', timeout=5)
-plt.plot(np.random.rand(1000))
-nltk.download('punkt', quiet=True)
-
+# Instantiate and run the system
 if __name__ == "__main__":
     oden_system = OdenDataSystem()
     asyncio.run(oden_system.run_system())
