@@ -1,5 +1,10 @@
 import time
+import threading
 from typing import List, Union
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class PenetrationTester:
     def __init__(self, ip_range: str, o_root: str, oden_collection_of_data: str, odens_mind: List[str]):
@@ -8,18 +13,23 @@ class PenetrationTester:
         self.oden_collection_of_data = oden_collection_of_data
         self.odens_mind = odens_mind
         self.penetration_logs = []
+        self.lock = threading.Lock()
 
     def decode_local_router(self) -> str:
         """Simulate decoding the local router."""
         log_entry = f"Decoding local router, IP Range: {self.ip_range}, Root Access: {self.o_root}"
-        self.penetration_logs.append(log_entry)
+        with self.lock:
+            self.penetration_logs.append(log_entry)
         time.sleep(0.5)  # Simulate processing time
+        logging.info(log_entry)
         return log_entry
 
     def target_signaling(self) -> str:
         """Simulate targeting signaling and networks."""
         log_entry = "Targeting signaling, networks...\nBuilding logs into local networking IP addresses."
-        self.penetration_logs.append(log_entry)
+        with self.lock:
+            self.penetration_logs.append(log_entry)
+        logging.info(log_entry)
         return log_entry
 
     def check_network_breakthrough(self) -> bool:
@@ -29,22 +39,31 @@ class PenetrationTester:
     def process_penetration(self) -> None:
         """Process the penetration test."""
         # Step 1: Decode local router
-        print(self.decode_local_router())
+        decode_thread = threading.Thread(target=self.decode_local_router)
+        decode_thread.start()
+        decode_thread.join()
 
         # Step 2: Target signaling and networks
-        print(self.target_signaling())
+        target_thread = threading.Thread(target=self.target_signaling)
+        target_thread.start()
+        target_thread.join()
 
         # Step 3: Check for network breakthrough
         if self.check_network_breakthrough():
-            print("Networking database has been retrieved, completed.")
-            self.penetration_logs.append("Network breakthrough successful.")
+            breakthrough_log = "Networking database has been retrieved, completed."
+            with self.lock:
+                self.penetration_logs.append(breakthrough_log)
+            logging.info(breakthrough_log)
         else:
-            print("Penetration test is being processed...")
-            self.penetration_logs.append("No network breakthrough detected.")
+            processing_log = "Penetration test is being processed..."
+            with self.lock:
+                self.penetration_logs.append(processing_log)
+            logging.info(processing_log)
 
     def get_penetration_logs(self) -> List[str]:
         """Retrieve the penetration logs."""
-        return self.penetration_logs
+        with self.lock:
+            return self.penetration_logs
 
 
 # Example Usage
@@ -64,4 +83,4 @@ if __name__ == "__main__":
     # Retrieve and print logs
     print("\nPenetration Logs:")
     for log in penetration_tester.get_penetration_logs():
-        print(f"- {log}")
+        print(f"- {log}
