@@ -1,168 +1,213 @@
-import time
-from typing import List, Tuple, Dict, Any
-import numpy as np
-from scipy.spatial import KDTree
 import cv2
+import torch
+import numpy as np
+import pyttsx3  # Text-to-Speech
+from ultralytics import YOLO
+from deep_sort_realtime.deepsort_tracker import DeepSort
 import threading
-from queue import Queue
-import logging
-from dataclasses import dataclass, field
+import queue
+from collections import Counter
 
-@dataclass
-class DetectedObject:
-    id: int
-    position: Tuple[float, float, float]
-    velocity: Tuple[float, float, float]
-    classification: str
-    confidence: float
-
-class Eye_of_oden:
+class EyeOfOden:
     def __init__(self):
-        self.left_sensor_range = (0, 180)  # degrees
-        self.right_sensor_range = (0, 180)  # degrees
-        self.detection_range = (40, 50)  # meters
-        self.is_tracking = False
-        self.detected_objects: List[DetectedObject] = []
-        self.object_history: Dict[int, List[DetectedObject]] = {}
-        self.tracking_thread: threading.Thread = None
-        self.detection_queue: Queue = Queue()
-        self.kdtree: KDTree = None
-        self.logger = self._setup_logger()
+        # Load AI Vision Model
+        self.model = YOLO("yolov8x.pt")  # YOLOv8-X for extreme accuracy
+        self.tracker = DeepSort(max_age=30)  # Advanced Object Tracker
 
-    def _setup_logger(self) -> logging.Logger:
-        logger = logging.getLogger("Eye_of_oden")
-        logger.setLevel(logging.DEBUG)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        return logger
+        # Camera Initialization
+        self.cap = cv2.VideoCapture(0)
+        if not self.cap.isOpened():
+            raise Exception("Failed to open webcam")
 
-    def Odens_eyes(self, L_eye: List[str], R_eye: Tuple[str]) -> None:
-        """Main function to control Oden's eyes tracking system"""
-        self.is_tracking = True
-        self.L_eye = L_eye
-        self.R_eye = R_eye
-        self.O_sensor = self.initialize_sensors()
-        self.tracking_thread = threading.Thread(target=self._continuous_tracking)
-        self.tracking_thread.start()
-        self.logger.info("Oden's eyes activated and tracking initiated.")
+        # Text-to-Speech Engine with Threading
+        self.speech_queue = queue.Queue()
+        self.tts = pyttsx3.init()
+        self.tts.setProperty("rate", 150)  # Adjust speaking speed
+        self.speech_thread = threading.Thread(target=self._speech_loop, daemon=True)
+        self.speech_thread.start()
 
-    def initialize_sensors(self) -> Dict[str, Any]:
-        """Initialize tracking sensors with detection range and additional parameters"""
-        return {
-            "vision_range": f"Tracking camera vision from {self.detection_range[0]}-{self.detection_range[1]} range",
-            "detection_range": self.detection_range,
-            "left_sensor": cv2.VideoCapture(0),  # Assuming left sensor is connected to camera 0
-            "right_sensor": cv2.VideoCapture(1),  # Assuming right sensor is connected to camera 1
-            "lidar_sensor": self._initialize_lidar(),  # Placeholder for LIDAR initialization
-        }
-
-    def _initialize_lidar(self) -> Any:
-        # Placeholder for LIDAR sensor initialization
-        # In a real implementation, this would initialize and return a LIDAR sensor object
-        return "LIDAR_SENSOR_OBJECT"
-
-    def _continuous_tracking(self) -> None:
-        while self.is_tracking:
-            detected_objects = self.object_detector()
-            self.detection_queue.put(detected_objects)
-            self._update_object_history(detected_objects)
-            self._update_kdtree()
-            time.sleep(0.1)
-
-    def object_detector(self) -> List[DetectedObject]:
-        """Detect and track objects in the field of view using multiple sensors"""
-        if not self.is_tracking:
-            self.logger.warning("Tracking system is offline")
-            return []
-
-        detected = []
-        object_id = 0
+        # Class Labels (COCO dataset subset)
+        self.class_labels = {0: "person", 1: "bicycle", 2: "car", 3: "motorcycle", 56: "chair", 58: "bench"}
         
-        # Simulate detection from multiple sensors
-        for angle in np.linspace(self.left_sensor_range[0], self.left_sensor_range[1], 20):
-            distance = np.random.uniform(self.detection_range[0], self.detection_range[1])
-            x = distance * np.cos(np.radians(angle))
-            y = distance * np.sin(np.radians(angle))
-            z = np.random.uniform(-5, 5)  # Simulated height
-            
-            velocity = (np.random.uniform(-5, 5), np.random.uniform(-5, 5), np.random.uniform(-2, 2))
-            classification = np.random.choice(["vehicle", "pedestrian", "animal", "unknown"])
-            confidence = np.random.uniform(0.7, 1.0)
-            
-            detected_object = DetectedObject(
-                id=object_id,
-                position=(x, y, z),
-                velocity=velocity,
-                classification=classification,
-                confidence=confidence
-            )
-            detected.append(detected_object)
-            object_id += 1
-            
-            self.logger.debug(f"Detected: {detected_object}")
-
-        return detected
-
-    def _update_object_history(self, detected_objects: List[DetectedObject]) -> None:
-        for obj in detected_objects:
-            if obj.id not in self.object_history:
-                self.object_history[obj.id] = []
-            self.object_history[obj.id].append(obj)
-            if len(self.object_history[obj.id]) > 100:  # Keep only last 100 positions
-                self.object_history[obj.id].pop(0)
-
-    def _update_kdtree(self) -> None:
-        if self.detected_objects:
-            positions = [obj.position for obj in self.detected_objects]
-            self.kdtree = KDTree(positions)
-
-    def get_nearest_objects(self, position: Tuple[float, float, float], k: int = 5) -> List[DetectedObject]:
-        if self.kdtree is None:
-            return []
-        distances, indices = self.kdtree.query(position, k=k)
-        return [self.detected_objects[i] for i in indices]
-
-    def get_sensor_status(self) -> Dict[str, Any]:
-        """Return current status of all sensors and tracking system"""
-        return {
-            "tracking": self.is_tracking,
-            "left_range": self.left_sensor_range,
-            "right_range": self.right_sensor_range,
-            "detection_range": self.detection_range,
-            "objects_detected": len(self.detected_objects),
-            "object_history_count": len(self.object_history),
-            "detection_queue_size": self.detection_queue.qsize(),
+        # Action Mapping
+        self.action_map = {
+            "person": {"moving": "walking", "stationary": "standing"},
+            "car": {"moving": "driving", "stationary": "parked"},
+            "bicycle": {"moving": "riding", "stationary": "stopped"},
+            "motorcycle": {"moving": "riding", "stationary": "stopped"}
         }
 
-    def shutdown(self) -> None:
-        """Safely shutdown the tracking system"""
-        self.is_tracking = False
-        if self.tracking_thread:
-            self.tracking_thread.join()
-        self.O_sensor["left_sensor"].release()
-        self.O_sensor["right_sensor"].release()
+        # Tracking State
+        self.frame_counter = 0
+        self.previous_track_ids = set()
+        self.last_spoken = {}  # Avoid repetitive announcements
+
+    def _speech_loop(self):
+        """Run TTS in a separate thread to prevent blocking."""
+        while True:
+            message = self.speech_queue.get()
+            if message is None:
+                break
+            self.tts.say(message)
+            self.tts.runAndWait()
+            self.speech_queue.task_done()
+
+    def speak(self, message):
+        """Add message to speech queue."""
+        # Avoid repeating messages too quickly
+        if message not in self.last_spoken or self.last_spoken[message] > 30:  # ~1 second at 30 fps
+            self.speech_queue.put(message)
+            self.last_spoken[message] = 0
+        # Increment counters for all spoken messages
+        for key in list(self.last_spoken.keys()):
+            self.last_spoken[key] += 1
+            if self.last_spoken[key] > 60:  # Clear old entries
+                del self.last_spoken[key]
+
+    def get_location(self, box, frame_width):
+        """Determine object location in frame (left, center, right)."""
+        x_center = (box[0] + box[2]) / 2
+        if x_center < frame_width / 3:
+            return "left"
+        elif x_center < 2 * frame_width / 3:
+            return "center"
+        else:
+            return "right"
+
+    def get_distance(self, box, frame_height):
+        """Estimate distance based on bounding box height."""
+        height = box[3] - box[1]
+        if height > 0.5 * frame_height:
+            return "close"
+        elif height > 0.2 * frame_height:
+            return "medium"
+        else:
+            return "far"
+
+    def get_movement(self, track, fps):
+        """Determine movement direction and speed."""
+        # Access DeepSort state (x, y, ar, h, vx, vy, ...)
+        state = track.mean if hasattr(track, 'mean') else [0, 0, 0, 0, 0, 0]
+        vx, vy = state[4], state[5]
+        speed = (vx**2 + vy**2)**0.5 * fps
+        if speed < 10:  # Threshold for stationary
+            return "stationary", speed
+        direction = "right" if vx > 0 else "left"
+        speed_label = "fast" if speed > 200 else "slow"
+        return f"{speed_label} {direction}", speed
+
+    def get_action(self, obj_type, movement):
+        """Infer basic action from movement."""
+        state = "moving" if movement != "stationary" else "stationary"
+        return self.action_map.get(obj_type, {}).get(state, "")
+
+    def generate_summary(self, tracks):
+        """Generate a scene summary."""
+        type_counts = Counter([t['type'] for t in tracks])
+        summary = "Currently, there are "
+        summary += ", ".join(f"{count} {t}{'s' if count > 1 else ''}" for t, count in type_counts.items())
+        if "person" in type_counts:
+            closest = min([t for t in tracks if t['type'] == "person"], 
+                         key=lambda x: x['distance_order'], default=None)
+            if closest:
+                summary += f". The closest person is {closest['action']} on the {closest['location']}."
+        return summary
+
+    def object_detector(self):
+        """Main loop for intelligent object detection and scene analysis."""
+        print("🚀 EyeOfOden AI Vision with Speech Activated...")
+        fps = self.cap.get(cv2.CAP_PROP_FPS) or 30
+
+        while self.cap.isOpened():
+            ret, frame = self.cap.read()
+            if not ret:
+                print("Failed to capture frame.")
+                break
+
+            # Run YOLOv8 for Object Detection
+            results = self.model(frame, conf=0.4)
+            detections = []
+            for result in results:
+                for box in result.boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    confidence = box.conf[0].item()
+                    class_id = int(box.cls[0].item())
+                    obj_type = self.class_labels.get(class_id, "unknown")
+                    detections.append([[x1, y1, x2, y2], confidence, obj_type])
+
+            # Track objects using DeepSORT
+            tracks = self.tracker.update_tracks(detections, frame=frame)
+            current_track_ids = set(track.track_id for track in tracks if track.is_confirmed())
+            track_data = []
+
+            # Process each track
+            for track in tracks:
+                if not track.is_confirmed():
+                    continue
+                box = track.to_tlbr()
+                obj_type = track.det_class if hasattr(track, 'det_class') else "unknown"
+                location = self.get_location(box, frame.shape[1])
+                distance = self.get_distance(box, frame.shape[0])
+                distance_order = {"close": 0, "medium": 1, "far": 2}[distance]
+                movement, speed = self.get_movement(track, fps)
+                action = self.get_action(obj_type, movement)
+
+                # Store track info
+                track_info = {
+                    "track_id": track.track_id,
+                    "type": obj_type,
+                    "location": location,
+                    "distance": distance,
+                    "distance_order": distance_order,
+                    "movement": movement,
+                    "speed": speed,
+                    "action": action
+                }
+                track_data.append(track_info)
+
+                # Draw on frame
+                x1, y1, x2, y2 = map(int, box)
+                label = f"ID: {track.track_id} - {obj_type} ({action})"
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+                # Event: Fast-moving object
+                if speed > 200:
+                    self.speak(f"A fast {obj_type} is moving {movement} on the {location}.")
+
+            # Event: New objects
+            new_ids = current_track_ids - self.previous_track_ids
+            for track_id in new_ids:
+                track = next(t for t in track_data if t["track_id"] == track_id)
+                self.speak(f"A new {track['type']} has entered the scene on the {track['location']}.")
+
+            # Periodic Summary (every ~5 seconds)
+            self.frame_counter += 1
+            if self.frame_counter >= 150:  # 5 seconds at 30 fps
+                summary = self.generate_summary(track_data)
+                self.speak(summary)
+                self.frame_counter = 0
+
+            self.previous_track_ids = current_track_ids
+
+            # Display Frame
+            cv2.imshow("EyeOfOden AI Vision", frame)
+
+            # Exit on 'q'
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        # Cleanup
+        self.cap.release()
         cv2.destroyAllWindows()
-        self.logger.info("Eye of Oden shutdown complete.")
+        self.speech_queue.put(None)
+        self.speech_thread.join()
+        print("EyeOfOden terminated.")
 
-# Example usage
+# Activate AI System
 if __name__ == "__main__":
-    eye = Eye_of_oden()
-    eye.Odens_eyes(
-        L_eye=["Tracking", "Eyes", "Of", "Objects"],
-        R_eye=("create motion sensor of data collection from",)
-    )
-    
     try:
-        time.sleep(5)  # Let the system run for 5 seconds
-        print("\nSensor Status:", eye.get_sensor_status())
-        
-        # Example of getting nearest objects to a point
-        nearest_objects = eye.get_nearest_objects((10, 10, 0))
-        print("\nNearest Objects:")
-        for obj in nearest_objects:
-            print(f"  ID: {obj.id}, Position: {obj.position}, Classification: {obj.classification}")
-        
-    finally:
-        eye.shutdown()
+        eye_of_oden = EyeOfOden()
+        eye_of_oden.object_detector()
+    except Exception as e:
+        print(f"Error: {e}")
