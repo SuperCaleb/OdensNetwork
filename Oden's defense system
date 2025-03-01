@@ -1,90 +1,159 @@
-THIS IS ONLY A DUMMY DEMO SCRIPY OF WHAT IT CAN DO.
-
-import time 
+import time
 import random
 import threading
 import asyncio
 import numpy as np
 from cryptography.fernet import Fernet
 from concurrent.futures import ThreadPoolExecutor
+import logging
+from datetime import datetime
+
+# Set up logging for security events
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class OdenDataSystem:
-    def __init__(self):
-        self.oden_collection_of_data_var = True
-        self.odens_mind = "Data's Mind"
-        self.o_system_security = ["Protected Compromised Data."]
-        self.odens_protection = ["Encrypt", "Transmit", "Delete", "Terminate"]
-        self.oden_palace = True
-        self.oden_collection_of_data_value = "Data's protection"
-        self.o_infinity = [self.oden_collection_of_data_value] + self.o_system_security
-        self.encryption_key = Fernet.generate_key()
+    def __init__(self, user_clearance="user"):
+        # Core state
+        self.oden_collection_of_data_var = True  # Data collection toggle
+        self.odens_mind = "Data's Mind"  # AI persona identifier
+        self.o_system_security = ["Protected Compromised Data"]  # Security status
+        self.odens_protection = ["Encrypt", "Transmit", "Delete", "Terminate"]  # Protection actions
+        self.oden_palace = False  # Security fortress status
+        self.oden_collection_of_data_value = "Data's protection"  # Data purpose
+        self.o_infinity = [self.oden_collection_of_data_value] + self.o_system_security  # System log
+        self.encryption_key = Fernet.generate_key()  # Encryption key
         self.fernet = Fernet(self.encryption_key)
-        self.data_matrix = np.random.rand(1000, 1000)
+        self.data_matrix = np.random.rand(100, 100)  # Reduced size for demo efficiency
+        self.user_clearance = user_clearance  # User privilege level
+        self.threat_level = 0  # Simulated threat level
+        self.security_log = []  # Log of security events
 
     async def oden_collection_of_data(self):
+        """Simulate data collection with threat monitoring."""
         if not self.oden_collection_of_data_var:
+            logging.warning("Data collection disabled due to prior encryption.")
             print("Data's encryption")
         else:
+            logging.info("Oden begins collecting data...")
             print("Collecting data...")
-            await asyncio.sleep(2)
+            await asyncio.sleep(1)  # Reduced sleep for demo responsiveness
+            self.threat_level = random.randint(0, 5)  # Simulate potential threat
+            logging.info(f"Threat level detected: {self.threat_level}")
+            print(f"Threat level: {self.threat_level}/5")
 
-    @staticmethod
-    def check_clearance():
-        odens_infinity_collection = "Death's Storage"
-        erase_o = odens_infinity_collection == "Data's Mind"
-        if erase_o:
+    def check_clearance(self):
+        """Verify user clearance and detect unauthorized access."""
+        authorized_levels = ["admin", "security"]
+        odens_infinity_collection = "Death's Storage"  # Forbidden zone
+        erase_o = odens_infinity_collection == self.odens_mind
+        if erase_o or self.user_clearance not in authorized_levels:
+            logging.critical(f"Unauthorized access attempt by {self.user_clearance} detected!")
             print("Oden's Compromised your system for attempting to breakthrough")
-        return erase_o
+            self.security_log.append(f"Intrusion detected at {datetime.now()}")
+            return False
+        logging.info(f"Clearance granted to {self.user_clearance}")
+        return True
 
     def activate_protection_system(self):
-        data = self.o_system_security and not self.check_clearance()
-        if self.odens_protection and data:
+        """Activate security measures based on clearance and threat level."""
+        clearance_valid = self.check_clearance()
+        if clearance_valid and self.threat_level > 2:
+            logging.info("Oden's protection system activated due to elevated threat.")
             print("Oden's protection system activated")
             self.encrypt_data()
+            self.o_system_security.append("Threat mitigated")
+        elif not clearance_valid:
+            self.trigger_termination()
+        else:
+            print("No immediate threat detected.")
 
     def activate_oden_palace(self):
+        """Enable the AI's security fortress."""
         if not self.oden_palace:
+            logging.info("Oden's Palace activated.")
             print("Oden's Palace Activated")
+            self.oden_palace = True
         else:
             print("Oden's Palace is already active")
 
-    def analyze_data(self, o_information):
-        o_encryption = (100.00, "data encryption completed")
-        print(o_encryption[1])
+    def analyze_data(self, o_information=None):
+        """Analyze collected data for anomalies."""
+        if o_information:  # Now using the parameter
+            logging.info(f"Analyzing input: {o_information}")
+        print("Data encryption completed")
         self.data_analysis()
 
     def data_analysis(self):
+        """Perform advanced analysis using SVD to detect patterns."""
+        logging.info("Performing advanced data analysis...")
         print("Performing advanced data analysis...")
-        result = np.linalg.svd(self.data_matrix)
-        print("SVD analysis completed.")
+        try:
+            result = np.linalg.svd(self.data_matrix)
+            anomaly_score = np.mean(result.S)  # Simplified anomaly detection
+            logging.info(f"Anomaly score: {anomaly_score:.2f}")
+            print("SVD analysis completed.")
+            if anomaly_score > 1.5:  # Arbitrary threshold
+                self.threat_level += 1
+                logging.warning("Potential anomaly detected in data!")
+        except Exception as e:
+            logging.error(f"Analysis failed: {e}")
+            print("Analysis failed.")
 
     def encrypt_data(self):
+        """Encrypt sensitive data with Fernet."""
+        logging.info("Encrypting sensitive data...")
         print("Encrypting sensitive data...")
-        sample_data = b"Sensitive information"
+        sample_data = str(self.data_matrix[:5]).encode()  # Encrypt a data sample
         encrypted_data = self.fernet.encrypt(sample_data)
-        print(f"Encrypted data: {encrypted_data}")
+        self.security_log.append(f"Data encrypted at {datetime.now()}")
+        print(f"Encrypted data sample: {encrypted_data[:50]}...")
 
     def process_data(self):
+        """Process data in parallel with progress simulation."""
+        logging.info("Processing data in parallel...")
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = [executor.submit(self.process_chunk, i) for i in range(4)]
             for future in futures:
                 future.result()
 
     def process_chunk(self, chunk_id):
+        """Simulate chunk processing with progress."""
         for i in range(25):
-            progress = chunk_id * 25 + i
+            progress = chunk_id * 25 + i + 1
             print(f"{progress}% Process completed...")
-            time.sleep(random.uniform(0.1, 0.5))
+            time.sleep(random.uniform(0.05, 0.2))  # Faster for demo
+
+    def trigger_termination(self):
+        """Simulate system lockdown or termination."""
+        logging.critical("Oden has initiated termination protocol!")
+        print("System terminated due to security breach.")
+        self.oden_collection_of_data_var = False
+        self.oden_palace = False
+        exit(1)  # Simulate shutdown
 
     async def run_system(self):
+        """Run the full security AI system."""
+        logging.info("Oden Data System initialized.")
+        print(f"Welcome to Oden's Security AI - {self.odens_mind}")
         await self.oden_collection_of_data()
-        self.check_clearance()
         self.activate_protection_system()
         self.activate_oden_palace()
-        self.analyze_data(True)
+        self.analyze_data("Incoming data stream")
         self.process_data()
+        if self.threat_level > 3:
+            self.trigger_termination()
+        else:
+            logging.info("Security operations completed successfully.")
+            print("Oden's watch continues...")
 
-# Instantiate and run the system
+# Demo with different clearance levels
 if __name__ == "__main__":
-    oden_system = OdenDataSystem()
-    asyncio.run(oden_system.run_system())
+    # Demo 1: Normal user
+    print("=== Demo 1: Normal User ===")
+    oden_system_user = OdenDataSystem(user_clearance="user")
+    asyncio.run(oden_system_user.run_system())
+
+    # Demo 2: Admin user
+    print("\n=== Demo 2: Admin User ===")
+    oden_system_admin = OdenDataSystem(user_clearance="admin")
+    asyncio.run(oden_system_admin.run_system())
