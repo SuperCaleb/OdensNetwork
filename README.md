@@ -1,53 +1,47 @@
+Oden's Defense System
+Oden's Defense System is a Python-based monitoring and defense mechanism that uses Reinforcement Learning (RL) to detect anomalies in system metrics (CPU, memory, and disk usage) and take appropriate actions.
 
-
----
-
-# Oden's Defense System
-
-To use this code for Oden's Defense System, follow these instructions:
-
-## Install Required Packages
-Ensure you have the necessary packages installed. You can install them using pip:
-
-```sh
-pip install cryptography numpy
-```
-
-## Save the Code
-Save the provided code in a Python file, for example, `oden_defense_system.py`.
-
-## Run the Script
-Open a terminal and navigate to the directory where the script is saved. Run the script using Python:
-
-```sh
-python oden_defense_system.py
-```
-
-## Understand the Output
-- **Demo 1: Normal User**: The system will simulate running with a user clearance level set to "user".
-- **Demo 2: Admin User**: The system will simulate running with a user clearance level set to "admin".
-
-## Modify Clearance Level
-You can change the `user_clearance` parameter when creating an instance of `OdenDataSystem` to test different user privilege levels (e.g., "admin", "security").
-
-## Key Methods
-- `oden_collection_of_data()`: Simulates data collection and threat monitoring.
-- `check_clearance()`: Verifies user clearance and detects unauthorized access.
-- `activate_protection_system()`: Activates security measures based on clearance and threat level.
-- `activate_oden_palace()`: Enables the AI's security fortress.
-- `analyze_data()`: Analyzes collected data for anomalies.
-- `encrypt_data()`: Encrypts sensitive data with Fernet.
-- `process_data()`: Processes data in parallel.
-- `trigger_termination()`: Simulates system lockdown or termination.
-
-## Logging
-The logging system provides real-time information on the system's operations and security events. You can check the console output for detailed logs.
-
-## Threat Level Simulation
-The `threat_level` is randomly generated during data collection to simulate potential threats. The system's response varies based on this level.
-
-By following these steps, you can run and test the Oden's Defense System code on your local machine.
-
----
-
+Features
+Metrics Gathering: Collects CPU, memory, and disk usage metrics using system commands.
+Anomaly Detection: Identifies anomalies based on historical data by calculating mean and standard deviation.
+Reinforcement Learning: Uses RL to choose actions that minimize anomalies.
+Logging: Logs actions and metrics to both console and a log file.
+Requirements
+Python 3.x
+Required Python packages: subprocess, time, random, collections, logging
+Installation
+Clone the repository:
+bash
+git clone https://github.com/SuperCaleb/OdensNetwork.git
+cd OdensNetwork
+Ensure Python 3.x is installed on your system.
+Usage
+Navigate to the directory containing the script:
+bash
+cd "Oden's defense system"
+Run the script:
+bash
+python3 "Oden's defense system.py"
+Script Explanation
+Key Components
+Logging Setup: Configures logging to output to both console and a file named oden.log.
+Constants: Sets various constants for history size, epsilon decay, learning rate, etc.
+gather_metrics(): Collects CPU, memory, and disk usage metrics.
+compute_state(): Converts metrics into a discrete state for the RL policy.
+compute_stats(): Calculates mean and standard deviation from historical metrics.
+execute_action(): Executes chosen actions and logs the action.
+Main Loop
+Metrics Gathering: Collects current system metrics.
+Anomaly Detection: Computes means and standard deviations from historical data and detects anomalies.
+Action Selection: Uses an epsilon-greedy policy to select an action based on the Q-table.
+Action Execution: Executes the chosen action.
+Reward Computation: Gathers new metrics and computes the reward based on the reduction of anomalies.
+Q-table Update: Updates the Q-table based on the reward.
+Epsilon Decay: Gradually decays epsilon to reduce exploration over time.
+Actions
+Monitor: Takes no action.
+Investigate: Logs the current system metrics.
+Terminate: Logs a message indicating the termination of a high CPU process.
+Reinforce: Logs a message indicating reinforcement of system defenses.
+This script continuously runs, gathering metrics, detecting anomalies, choosing actions, and updating its RL policy to improve over time.
 
