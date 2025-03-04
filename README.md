@@ -11,15 +11,19 @@ Python 3.x
 Required Python packages: subprocess, time, random, collections, logging
 Installation
 Clone the repository:
+
 bash
 git clone https://github.com/SuperCaleb/OdensNetwork.git
 cd OdensNetwork
 Ensure Python 3.x is installed on your system.
+
 Usage
 Navigate to the directory containing the script:
+
 bash
 cd "Oden's defense system"
 Run the script:
+
 bash
 python3 "Oden's defense system.py"
 Script Explanation
