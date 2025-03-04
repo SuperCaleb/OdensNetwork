@@ -1,4 +1,3 @@
-Here is a more readable and visually appealing version of your README:
 
 ---
 
