@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import layers, Model
+import psutil
+import random
+import logging
+import time
+from collections import deque
+import threading
+from dataclasses import dataclass
+from sklearn.preprocessing import StandardScaler
+import signal
+
+# --- Configuration ---
+@dataclass
+class OdenConfig:
+    log_file: str = "oden_security.log"
+    anomaly_threshold: float = 0.85
+    metrics_window: int = 5  # Small window for metrics history
+    metrics_history_size: int = 100  # Reduced history size
+    memory_size: int = 1000  # Reduced memory for training
+    learning_rate: float = 0.0003
+    check_interval: float = 1.0
+    action_cooldown: float = 3.0
+
+CONFIG = OdenConfig()
+
+# --- Simplified Logging ---
+logging.basicConfig(filename=CONFIG.log_file, level=logging.INFO, format='%(asctime)s - %(message)s')
+
+# --- Global State ---
+class SystemState:
+    def __init__(self):
+        self.active = True
+        self.bad_ips = {"1.2.3.4", "5.6.7.8"}  # Static bad IPs
+        self.metrics_history = deque(maxlen=CONFIG.metrics_history_size)
+        self.anomaly_history = deque(maxlen=CONFIG.metrics_history_size)
+        self.last_action_time = 0.0
+
+STATE = SystemState()
+ACTIONS = ["Terminate", "Block", "Investigate"]
+CRITICAL_PROCESSES = {"python3", "systemd", "bash", "sshd"}
+SCALER = StandardScaler()
+
+# --- Lightweight Neural Network for Anomaly Detection ---
+class OdenBrain:
+    def __init__(self):
+        self.model = self._build_model()
+        self.scaler = SCALER
+        self.scaler_fitted = False
+
+    def _build_model(self):
+        inputs = layers.Input(shape=(CONFIG.metrics_window, 6))  # 6 metrics
+        x = layers.Flatten()(inputs)
+        x = layers.Dense(32, activation="relu")(x)  # Small layer
+        x = layers.Dense(16, activation="relu")(x)  # Minimal depth
+        anomaly_score = layers.Dense(1, activation="sigmoid")(x)
+        model = Model(inputs, anomaly_score)
+        model.compile(optimizer="adam", loss="binary_crossentropy")
+        return model
+
+    def predict(self, metrics):
+        padded = self._prepare_metrics(metrics)
+        if self.scaler_fitted:
+            normalized = self.scaler.transform(padded).astype(np.float16)
+        else:
+            normalized = padded.astype(np.float16)
+        batch = tf.convert_to_tensor(normalized[None, :], dtype=tf.float16)
+        return self.model(batch, training=False).numpy()[0][0]
+
+    def _prepare_metrics(self, metrics):
+        STATE.metrics_history.append(metrics)
+        history = list(STATE.metrics_history)
+        if len(history) < CONFIG.metrics_window:
+            padded = np.zeros((CONFIG.metrics_window, 6), dtype=np.float16)
+            padded[-len(history):] = history
+        else:
+            padded = np.array(history[-CONFIG.metrics_window:], dtype=np.float16)
+        return padded
+
+# --- Simplified Action Policy ---
+class OdenPolicy:
+    def __init__(self):
+        self.actions = ACTIONS
+
+    def choose_action(self, anomaly_score):
+        if anomaly_score > CONFIG.anomaly_threshold:
+            return random.choice(self.actions)
+        return "Investigate"  # Default to least invasive
+
+# --- Gather System Metrics ---
+def gather_metrics():
+    try:
+        cpu = psutil.cpu_percent(interval=0.1)
+        mem = psutil.virtual_memory().percent
+        disk = psutil.disk_usage("/").percent
+        processes = len(psutil.pids())
+        connections = len(psutil.net_connections())
+        bad_connections = sum(1 for conn in psutil.net_connections() 
+                            if conn.raddr and conn.raddr.ip in STATE.bad_ips)
+        return np.array([cpu, mem, disk, processes, connections, bad_connections], dtype=np.float16)
+    except Exception:
+        return np.zeros(6, dtype=np.float16)
+
+# --- Execute Actions ---
+def execute_action(action):
+    current_time = time.time()
+    if current_time - STATE.last_action_time < CONFIG.action_cooldown:
+        return
+    STATE.last_action_time = current_time
+
+    try:
+        if action == "Terminate":
+            target = max([p for p in psutil.process_iter(["pid", "cpu_percent", "name"])
+                         if p.info["name"].lower() not in CRITICAL_PROCESSES and p.info["cpu_percent"] > 50],
+                         key=lambda p: p.info["cpu_percent"] or 0, default=None)
+            if target:
+                psutil.Process(target.info["pid"]).terminate()
+                logging.info(f"Terminated process: {target.info['name']} (PID: {target.info['pid']})")
+        elif action == "Block":
+            logging.info("Simulated blocking of bad IPs")
+        elif action == "Investigate":
+            logging.info("Investigating anomaly")
+    except Exception as e:
+        logging.error(f"Action '{action}' failed: {str(e)}")
+
+# --- Main Logic ---
+def oden_core(brain, policy):
+    while STATE.active:
+        metrics = gather_metrics()
+        anomaly_score = brain.predict(metrics)
+        STATE.anomaly_history.append(anomaly_score)
+
+        if anomaly_score > CONFIG.anomaly_threshold:
+            logging.info(f"Anomaly detected: Score {anomaly_score:.2f}")
+
+        action = policy.choose_action(anomaly_score)
+        execute_action(action)
+
+        logging.info(f"Status: CPU {metrics[0]:.1f}%, Mem {metrics[1]:.1f}%")
+        time.sleep(CONFIG.check_interval)
+
+# --- Signal Handler ---
+def signal_handler(sig, frame):
+    STATE.active = False
+
+# --- Run Oden ---
+if __name__ == "__main__":
+    brain = OdenBrain()
+    policy = OdenPolicy()
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    threading.Thread(target=oden_core, args=(brain, policy), daemon=True).start()
+
+    while STATE.active:
+        time.sleep(1)
