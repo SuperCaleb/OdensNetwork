@@ -1,70 +1,75 @@
 
+
 ---
 
-# Oden's Defense System
+# Lightweight Oden
 
-**Oden's Defense System** is a Python-based monitoring and defense mechanism that uses Reinforcement Learning (RL) to detect anomalies in system metrics (CPU, memory, and disk usage) and take appropriate actions.
+## Overview
+Lightweight Oden is a Python script designed for anomaly detection and automated response in system metrics. It utilizes a lightweight neural network to detect anomalies and perform actions such as terminating processes, blocking IPs, or investigating anomalies.
 
 ## Features
-- **Metrics Gathering**: Collects CPU, memory, and disk usage metrics using system commands.
-- **Anomaly Detection**: Identifies anomalies based on historical data by calculating mean and standard deviation.
-- **Reinforcement Learning**: Uses RL to choose actions that minimize anomalies.
-- **Logging**: Logs actions and metrics to both console and a log file.
+- **Anomaly Detection:** Uses a neural network to identify unusual system behavior based on metrics like CPU usage, memory usage, disk usage, and network connections.
+- **Automated Actions:** Executes predefined actions (Terminate, Block, Investigate) based on the detected anomalies.
+- **Logging:** Maintains a log of activities and detected anomalies for further analysis.
+- **Configuration:** Easily configurable parameters for anomaly thresholds, metrics history size, and action cooldowns.
 
-## Requirements
-- **Python 3.x**
-- Required Python packages: `subprocess`, `time`, `random`, `collections`, `logging`
+## Setup and Usage
 
-## Installation
+### Prerequisites
+- Python 3.x
+- Required Python libraries: `numpy`, `tensorflow`, `psutil`, `sklearn`
 
-Clone the repository:
+### Installation
+1. Clone the repository:
+   ```sh
+   git clone https://github.com/SuperCaleb/OdensNetwork.git
+   ```
+2. Navigate to the directory:
+   ```sh
+   cd OdensNetwork
+   ```
+3. Install the necessary Python libraries:
+   ```sh
+   pip install numpy tensorflow psutil scikit-learn
+   ```
 
-```bash
-git clone https://github.com/SuperCaleb/OdensNetwork.git
-cd OdensNetwork
+### Configuration
+The configuration can be adjusted in the `OdenConfig` class within the script:
+```python
+@dataclass
+class OdenConfig:
+    log_file: str = "oden_security.log"
+    anomaly_threshold: float = 0.85
+    metrics_window: int = 5
+    metrics_history_size: int = 100
+    memory_size: int = 1000
+    learning_rate: float = 0.0003
+    check_interval: float = 1.0
+    action_cooldown: float = 3.0
 ```
+Adjust these parameters based on your requirements.
 
-Ensure Python 3.x is installed on your system.
-
-## Usage
-
-Navigate to the directory containing the script:
-
-```bash
-cd "Oden's defense system"
+### Running the Script
+Execute the script using Python:
+```sh
+python3 Lightweight Oden
 ```
+The script will start monitoring system metrics and execute actions based on the detected anomalies.
 
-Run the script:
+### Stopping the Script
+The script can be stopped gracefully using SIGINT (Ctrl+C) or SIGTERM signals.
 
-```bash
-python3 "Oden's defense system.py"
-```
+## Logging
+The script logs its actions and detected anomalies to the file specified in the configuration (`oden_security.log`).
 
-## Script Explanation
+## License
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](https://github.com/SuperCaleb/OdensNetwork/blob/Oden's-Weapon/LICENSE) file for details.
 
-### Key Components
-- **Logging Setup**: Configures logging to output to both console and a file named `oden.log`.
-- **Constants**: Sets various constants for history size, epsilon decay, learning rate, etc.
-- **`gather_metrics()`**: Collects CPU, memory, and disk usage metrics.
-- **`compute_state()`**: Converts metrics into a discrete state for the RL policy.
-- **`compute_stats()`**: Calculates mean and standard deviation from historical metrics.
-- **`execute_action()`**: Executes chosen actions and logs the action.
+## Repository
+- [GitHub Repository](https://github.com/SuperCaleb/OdensNetwork)
 
-### Main Loop
-1. **Metrics Gathering**: Collects current system metrics.
-2. **Anomaly Detection**: Computes means and standard deviations from historical data and detects anomalies.
-3. **Action Selection**: Uses an epsilon-greedy policy to select an action based on the Q-table.
-4. **Action Execution**: Executes the chosen action.
-5. **Reward Computation**: Gathers new metrics and computes the reward based on the reduction of anomalies.
-6. **Q-table Update**: Updates the Q-table based on the reward.
-7. **Epsilon Decay**: Gradually decays epsilon to reduce exploration over time.
-
-### Actions
-- **Monitor**: Takes no action.
-- **Investigate**: Logs the current system metrics.
-- **Terminate**: Logs a message indicating the termination of a high CPU process.
-- **Reinforce**: Logs a message indicating reinforcement of system defenses.
-
-This script continuously runs, gathering metrics, detecting anomalies, choosing actions, and updating its RL policy to improve over time.
+### Author
+- GitHub: [SuperCaleb](https://github.com/SuperCaleb)
 
 ---
+
