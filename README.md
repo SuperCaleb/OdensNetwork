@@ -126,6 +126,64 @@ Oden is a powerful tool for real-time anomaly detection and response, leveraging
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Oden's Network - Hybrid AI System
 
 ## Overview
@@ -230,3 +288,227 @@ For any inquiries or support, please contact [SuperCaleb](https://github.com/Sup
 ---
 
 This README provides an overview of the Oden's Network Hybrid AI system, its features, key components, usage instructions, dependencies, installation steps, and contact information.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# EyeOfOden AI Vision System
+
+## Overview
+
+EyeOfOden is an advanced computer vision system designed to provide real-time object detection, tracking, and scene analysis. It utilizes the YOLOv8-X model for high-accuracy object detection and the DeepSORT algorithm for object tracking. Additionally, it offers text-to-speech capabilities to announce detected objects and actions within a scene.
+
+## Features
+
+- **Real-time Object Detection:** Uses YOLOv8-X for detecting various objects with high accuracy.
+- **Object Tracking:** Employs DeepSORT for tracking objects across frames.
+- **Text-to-Speech Announcements:** Announces detected objects and their actions using a text-to-speech engine.
+- **Scene Summarization:** Provides periodic summaries of the scene, including object counts and notable actions.
+
+## Requirements
+
+- Python 3.7+
+- OpenCV
+- PyTorch
+- NumPy
+- pyttsx3
+- ultralytics (YOLO)
+- deep_sort_realtime
+
+## Installation
+
+1. **Clone the repository:**
+
+    ```bash
+    git clone https://github.com/SuperCaleb/OdensNetwork.git
+    cd OdensNetwork
+    ```
+
+2. **Create and activate a virtual environment:**
+
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+    ```
+
+3. **Install the required packages:**
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## Usage
+
+1. **Run the EyeOfOden AI Vision System:**
+
+    ```bash
+    python "Oden's Advanced Computer Vison Program"
+    ```
+
+2. **Functionality:**
+    - **Object Detection:** The program captures frames from the webcam and detects objects using the YOLOv8-X model.
+    - **Object Tracking:** Detected objects are tracked across frames using DeepSORT.
+    - **Text-to-Speech Announcements:** The program announces new objects entering the scene, fast-moving objects, and provides periodic summaries of the scene.
+    - **Scene Analysis:** Determines object locations, distances, movements, and actions.
+
+3. **Controls:**
+    - Press `q` to exit the program.
+
+## How It Works
+
+1. **Initialization:**
+    - The YOLOv8-X model is loaded for object detection.
+    - The DeepSORT tracker is initialized for tracking objects.
+    - The webcam is accessed for capturing video frames.
+    - A text-to-speech engine is set up to run in a separate thread for non-blocking speech synthesis.
+
+2. **Main Loop:**
+    - Frames are captured from the webcam.
+    - Objects are detected in each frame using the YOLOv8-X model.
+    - Detected objects are tracked across frames using DeepSORT.
+    - The program determines the location, distance, movement, and action of each tracked object.
+    - Text-to-speech announcements are made for new objects and notable events.
+    - A summary of the scene is generated and announced periodically.
+    - The processed frames are displayed in a window.
+
+3. **Cleanup:**
+    - The webcam is released, and the OpenCV window is closed.
+    - The text-to-speech thread is terminated gracefully.
+
+## Example Output
+
+The program provides real-time output through the OpenCV window and text-to-speech announcements. Example announcements include:
+
+- "A new person has entered the scene on the left."
+- "A fast car is moving fast right on the center."
+- "Currently, there are 2 persons, 1 car, and 1 bicycle. The closest person is walking on the right."
+
+## Troubleshooting
+
+- **Failed to open webcam:** Ensure your webcam is connected and accessible.
+- **Missing dependencies:** Make sure all required packages are installed correctly.
+- **Other errors:** Check the console output for error messages and troubleshoot accordingly.
+
+## License
+
+This project is licensed under the MIT License.
+
+## Contributing
+
+Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas.
+
+---
+
+Feel free to customize this README further based on your specific needs and preferences.
