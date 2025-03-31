@@ -1,3 +1,8 @@
+![Screenshot 2025-03-30 211533](https://github.com/user-attachments/assets/d58c40e4-fd80-4077-91d6-7291b2bb23c9)
+![Screenshot 2025-03-30 211626](https://github.com/user-attachments/assets/229cd89d-6f54-49d1-b1d5-dfdf4316d899)
+![Screenshot 2025-03-30 211644](https://github.com/user-attachments/assets/594950d6-abd2-48f7-a8cf-17dbc557c992)
+![Screenshot 2025-03-30 211703](https://github.com/user-attachments/assets/125fd493-78df-4d49-ad22-f19fe22950c7)
+![Screenshot 2025-03-30 211721](https://github.com/user-attachments/assets/c88229c6-5d38-434d-8b7c-bbbcb57f8d06)
 # Oden's Network - README
 
 ## Table of Contents
