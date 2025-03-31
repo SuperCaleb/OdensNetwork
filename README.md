@@ -1,6 +1,6 @@
-# Oden
+#  Lighweight Oden
 
-Oden is a real-time anomaly detection and response system designed to monitor and protect network systems. It uses advanced machine learning techniques, including a Transformer-based predictor and a Deep Q-Network (DQN) for decision-making, to identify and respond to potential security threats.
+Lightweight Oden is a real-time anomaly detection and response system designed to monitor and protect network systems. It uses advanced machine learning techniques, including a Transformer-based predictor and a Deep Q-Network (DQN) for decision-making, to identify and respond to potential security threats.
 
 ## How Oden Works
 
@@ -87,7 +87,11 @@ Logs are saved to the specified log file (`oden_security.log` by default). Examp
 
 ## Conclusion
 
-Oden is a powerful tool for real-time anomaly detection and response, leveraging advanced machine learning techniques to protect your network systems. Customize and extend Oden to fit your specific requirements, and ensure the security and stability of your network infrastructure.
+Lightweight Oden is a powerful tool for real-time anomaly detection and response, leveraging advanced machine learning techniques to protect your network systems. Customize and extend Oden to fit your specific requirements, and ensure the security and stability of your network infrastructure.
+
+
+
+
 
 
 
