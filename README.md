@@ -1,148 +1,149 @@
-#  Lighweight Oden
+# Oden's Network - README
 
-Lightweight Oden is a real-time anomaly detection and response system designed to monitor and protect network systems. It uses advanced machine learning techniques, including a Transformer-based predictor and a Deep Q-Network (DQN) for decision-making, to identify and respond to potential security threats.
+## Table of Contents
+- [Introduction](#introduction)
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+  - [Running Oden](#running-oden)
+  - [Commands](#commands)
+- [Components](#components)
+  - [System State Management](#system-state-management)
+  - [Configuration Management](#configuration-management)
+  - [Advanced Prometheus Monitoring](#advanced-prometheus-monitoring)
+  - [Logging System](#logging-system)
+  - [Anomaly Detection](#anomaly-detection)
+  - [Action Execution](#action-execution)
+  - [Notification System](#notification-system)
+  - [Threat Intelligence](#threat-intelligence)
+  - [Oden Brain](#oden-brain)
+  - [Oden Policy](#oden-policy)
+  - [Oden Dynamics](#oden-dynamics)
+  - [Consciousness Module](#consciousness-module)
+  - [Chain of Thought (CoT)](#chain-of-thought-cot)
+  - [Health Check](#health-check)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
 
-## How Oden Works
+## Introduction
+**Oden's Network** is an advanced cybersecurity and monitoring system designed to detect, analyze, and respond to various threats in real-time. Oden leverages state-of-the-art machine learning, anomaly detection, and AI-driven decision-making to ensure the security and stability of your systems.
 
-### Key Components
+## Overview
+Oden is built with a modular architecture that includes components for monitoring system metrics, detecting anomalies, executing actions, and maintaining overall system health. It integrates with popular tools and services like Prometheus for monitoring, TensorFlow for machine learning, and various APIs for threat intelligence.
 
-1. **Configuration (`OdenConfig`)**: Configures various parameters such as log file, anomaly threshold, input window size, metrics history size, training samples, learning rate, check interval, action cooldown, and retrain interval.
+## Key Features
+- **Real-time Monitoring**: Continuous system metrics collection and analysis.
+- **Anomaly Detection**: Advanced machine learning models to detect unusual behavior.
+- **Automated Response**: AI-driven decision-making to execute predefined actions based on detected anomalies.
+- **Prometheus Integration**: Export key metrics to Prometheus for visualization and alerting.
+- **Threat Intelligence**: Integration with multiple threat intelligence sources.
+- **Enhanced Logging**: Structured logging with alerting capabilities.
+- **Health Checks**: Regular validation and fine-tuning of machine learning models.
 
-2. **System State (`SystemState`)**: Maintains the global state of the system, including active status, bad IPs, metrics history, anomaly history, new metrics buffer, action timing, emotional state, and active threads.
+## Installation
+To install Oden, you need to have Python 3.7+ installed on your system. Follow these steps to set up Oden:
 
-3. **Logging**: Uses Python's `logging` module to log important events and anomalies to the specified log file.
+1. Clone the repository:
+   ```sh
+   git clone https://github.com/SuperCaleb/OdensNetwork.git
+   cd OdensNetwork
+   ```
 
-4. **Transformer-Based Predictor**: A Transformer model that predicts system metrics based on historical data to detect anomalies.
+2. Create a virtual environment and activate it:
+   ```sh
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
-5. **Enhanced DQN-Based Action Policy**: A reinforcement learning model that selects actions based on the detected anomalies and the current system state.
+3. Install the required dependencies:
+   ```sh
+   pip install -r requirements.txt
+   ```
 
-6. **System Metrics Collection**: Gathers real-time system metrics such as CPU usage, memory usage, disk usage, number of processes, number of connections, and number of bad connections.
+## Configuration
+Oden's configuration is managed through the `OdenConfig` class. Key configuration parameters include log file paths, alert thresholds, metrics intervals, and API keys for threat intelligence sources.
 
-7. **Action Execution**: Executes predefined actions such as terminating processes, blocking connections, investigating anomalies, isolating the network, and alerting the administrator based on the detected anomalies.
+You can customize the configuration by editing the `OdenConfig` class in the source code or by setting environment variables for sensitive information like API keys and email passwords.
 
-8. **Training Data Processing**: Collects and processes training data for the Transformer model to learn and improve its predictions.
-
-9. **Core Detection and Learning Logic**: The main loop that continuously monitors the system, detects anomalies, selects actions, and learns from the environment.
-
-### How to Use Oden
-
-#### Prerequisites
-
-- Python 3.6+
-- Required Python packages: `numpy`, `tensorflow`, `psutil`, `scikit-learn`, `dataclasses`
-
-#### Setup
-
-1. **Install the required Python packages**:
-    ```sh
-    pip install numpy tensorflow psutil scikit-learn dataclasses
-    ```
-
-2. **Clone the repository**:
-    ```sh
-    git clone https://github.com/SuperCaleb/OdensNetwork.git
-    cd OdensNetwork
-    ```
-
-#### Running Oden
-
-1. **Run the main script**:
-    ```sh
-    python Lightweight\ Oden
-    ```
-
-2. **Collect initial training data**:
-    The system will collect initial training data to train the Transformer model.
-
-3. **Train the Transformer model**:
-    The system will train the Transformer model using the collected training data.
-
-4. **Start monitoring**:
-    The system will start monitoring the real-time system metrics, detecting anomalies, and executing actions based on the detected anomalies.
-
-#### Stopping Oden
-
-To safely stop Oden, send a SIGINT (Ctrl+C) or SIGTERM signal. The system will shutdown gracefully, ensuring that all threads are terminated properly.
-
-### Customizing Oden
-
-You can customize various parameters by modifying the `OdenConfig` class. For example, you can change the log file name, anomaly threshold, input window size, metrics history size, training samples, learning rate, check interval, action cooldown, and retrain interval.
-
-### Example Log Output
-
-Logs are saved to the specified log file (`oden_security.log` by default). Example log output:
-```
-2025-03-24 19:47:57 - Terminated process: suspicious_process (PID: 12345)
-2025-03-24 19:48:57 - Blocked process: malicious_process (PID: 67890)
-2025-03-24 19:49:57 - Investigating anomaly
-2025-03-24 19:50:57 - Network isolated: SSH only
-2025-03-24 19:51:57 - Critical anomaly detected!
+## Usage
+### Running Oden
+To start Oden, simply run the main script:
+```sh
+python Oden
 ```
 
-### Important Notes
+Oden will initialize its components, start monitoring, and begin processing system metrics. The Prometheus server will start on port 8000 by default.
 
-- **Critical Processes**: The system has a list of critical processes (`CRITICAL_PROCESSES`) that it will not terminate or block.
-- **Emotional State**: The system uses an emotional state model to adjust its behavior based on the severity of detected anomalies.
-- **Self-Replication**: The system can spawn new threads to handle high anomaly scores, ensuring continued monitoring and response.
+### Commands
+Oden supports a few interactive commands that can be issued via standard input (stdin):
 
-## Conclusion
+- `status`: Provides a detailed status update of the system.
+- `explain_last_action`: Explains the reasoning behind the last action taken by Oden.
 
-Lightweight Oden is a powerful tool for real-time anomaly detection and response, leveraging advanced machine learning techniques to protect your network systems. Customize and extend Oden to fit your specific requirements, and ensure the security and stability of your network infrastructure.
+## Components
+### System State Management
+The `SystemState` class manages the overall state of the system, including active status, bad IPs, metrics history, anomaly history, and more.
 
+### Configuration Management
+The `OdenConfig` class defines the configuration parameters for Oden. These include logging settings, metrics intervals, thresholds, and API keys for various integrations.
 
+### Advanced Prometheus Monitoring
+Oden uses Prometheus to monitor key system metrics like CPU usage, memory usage, anomaly scores, and GPU utilization. The `start_prometheus_server` function starts a Prometheus metrics server on a separate thread.
 
+### Logging System
+The `OdenLogger` class provides an enhanced logging system with structured logging, alert thresholds, and metrics reporting. Logs are written to a rotating file and can trigger alerts based on the volume and severity of log messages.
 
+### Anomaly Detection
+Oden uses machine learning models to detect anomalies in system metrics. The `OdenBrain` class manages the training, prediction, and validation of these models. Anomalies are detected based on a combination of reconstruction errors, classification scores, and cluster distances.
 
+### Action Execution
+Oden can execute predefined actions based on detected anomalies. Actions include terminating processes, encrypting files, transmitting alerts, deleting suspicious files, and more. The `execute_action` function handles the execution of these actions and updates the effectiveness of each action.
 
+### Notification System
+Oden can send notifications via email and Slack. The `send_notification` function formats and sends alerts based on context provided by the system. Email notifications are sent using the SMTP protocol.
 
+### Threat Intelligence
+Oden integrates with multiple threat intelligence sources to update its list of bad IPs. The `refresh_threat_intel` function periodically fetches threat intelligence data and updates the system's bad IP list.
 
+### Oden Brain
+The `OdenBrain` class is the core of Oden's anomaly detection system. It includes methods for building and training machine learning models, predicting anomalies, and validating model performance.
 
+### Oden Policy
+The `OdenPolicy` class implements a Dueling Deep Q-Network (DQN) with Prioritized Experience Replay to decide on actions based on the current state of the system. It uses reinforcement learning to improve its decision-making over time.
 
+### Oden Dynamics
+The `OdenDynamics` class models the dynamics of the system by predicting future states based on current metrics and actions. It helps in estimating the impact of actions and planning proactive steps.
 
+### Consciousness Module
+The `ConsciousnessModule` class simulates a rudimentary form of consciousness by maintaining a self-state, assessing emotional impact, and reflecting on actions. It enhances Oden's decision-making by considering the system's overall well-being.
 
+### Chain of Thought (CoT)
+The `OdenCoT` class manages the chain of thought for Oden, assessing anomalies, selecting actions, evaluating responses, and planning proactive steps. It integrates with the Consciousness Module for enhanced decision-making.
 
+### Health Check
+The `health_check` function periodically validates the performance of Oden's machine learning models and fine-tunes them if necessary. It ensures that the models remain accurate and effective over time.
 
+## Development
+To contribute to Oden's development, follow these steps:
 
+1. Fork the repository and clone your fork.
+2. Create a new branch for your feature or bugfix.
+3. Implement your changes and write tests if applicable.
+4. Commit your changes and push your branch to your fork.
+5. Create a pull request to the main repository.
 
+## Contributing
+We welcome contributions from the community! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to contribute to Oden.
 
+## License
+Oden is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
 
+---
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Thank you for using Oden's Network! For any questions or support, please contact us at support@example.com.
 
 
 
