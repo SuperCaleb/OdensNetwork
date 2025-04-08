@@ -37,19 +37,24 @@ PROM_CPU = Gauge('oden_cpu_usage', 'CPU usage percentage')
 PROM_MEM = Gauge('oden_memory_usage', 'Memory usage percentage')
 PROM_ANOMALY = Gauge('oden_anomaly_score', 'Anomaly score computed by Oden')
 PROM_GPU = Gauge('oden_gpu_utilization', 'GPU utilization percentage')
+PROM_ERROR_RATE = Gauge('oden_error_rate', 'Error rate per minute')  # New metric for error tracking
 
 def start_prometheus_server(port: int = 8000) -> None:
-    # Start Prometheus metrics server on a separate thread
-    start_http_server(port)
-    STATE.logger.log_event("INFO", f"Prometheus metrics server started on port {port}")
+    try:
+        start_http_server(port)
+        STATE.logger.log_event("INFO", f"Prometheus metrics server started on port {port}")
+    except Exception as e:
+        STATE.logger.log_event("ERROR", "Failed to start Prometheus server", {"error": str(e), "traceback": traceback.format_exc()})
 
 def update_prometheus_gauges(metrics: np.ndarray, anomaly_score: float) -> None:
-    PROM_CPU.set(metrics[0])
-    PROM_MEM.set(metrics[1])
-    PROM_ANOMALY.set(anomaly_score)
+    try:
+        PROM_CPU.set(metrics[0])
+        PROM_MEM.set(metrics[1])
+        PROM_ANOMALY.set(anomaly_score)
+    except Exception as e:
+        STATE.logger.log_event("ERROR", "Failed to update Prometheus gauges", {"error": str(e), "traceback": traceback.format_exc()})
 
 def log_gpu_utilization() -> None:
-    # If NVIDIA GPUs are available, call nvidia-smi to log utilization
     if shutil.which("nvidia-smi"):
         try:
             output = subprocess.check_output(["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits"])
@@ -57,7 +62,7 @@ def log_gpu_utilization() -> None:
             PROM_GPU.set(gpu_util)
             STATE.logger.log_event("INFO", f"GPU Utilization: {gpu_util}%")
         except Exception as e:
-            STATE.logger.log_event("ERROR", "Failed to log GPU utilization", {"error": str(e)})
+            STATE.logger.log_event("ERROR", "Failed to log GPU utilization", {"error": str(e), "traceback": traceback.format_exc()})
 
 # --- Configuration Management ---
 @dataclass
@@ -67,7 +72,7 @@ class OdenConfig:
     log_backup_count: int = 5
     log_alert_threshold: int = 30
     log_metrics_interval: float = 300.0  # 5 minutes
-    effectiveness_file: str = "oden_effectiveness.json"
+    effectiveness_file: str = "threat_signatures.json"
     backup_dir: str = "oden_backups"
     anomaly_threshold: float = 0.85
     metrics_window: int = 15
@@ -126,151 +131,228 @@ THOUGHT_TEMPLATES = {
     ],
     "detailed_status": [
         "Here's the full system rundown: CPU {cpu:.1f}%, Memory {mem:.1f}%, Disk {disk:.1f}%, Network Sent {net_sent}, Network Received {net_recv}, Processes {processes}, Connections {connections}, Bad Connections {bad_conns}, Max CPU Process {max_cpu:.1f}%, Max Memory Process {max_mem:.1f}%, Disk I/O {disk_io}, Latency {latency:.2f}ms, User Logins {user_logins}."
+    ],
+    "error_detected": [
+        "I encountered an error: {error}. Here's what happened: {traceback}",
+        "Something went wrong with {component}: {error}. Details: {traceback}"
     ]
 }
 
 def express_thought(event: str, context: Dict[str, Any]) -> str:
-    templates = THOUGHT_TEMPLATES.get(event, [""])
-    template = random.choice(templates)
-    return template.format(**context)
+    try:
+        templates = THOUGHT_TEMPLATES.get(event, [""])
+        template = random.choice(templates)
+        return template.format(**context)
+    except Exception as e:
+        STATE.logger.log_event("ERROR", "Failed to express thought", {"error": str(e), "traceback": traceback.format_exc()})
+        return f"Error expressing thought: {str(e)}"
 
 # --- Positional Encoding Layer ---
 class PositionalEncoding(layers.Layer):
     def __init__(self, position: int, d_model: int) -> None:
         super(PositionalEncoding, self).__init__()
-        self.pos_encoding = self.positional_encoding(position, d_model)
+        try:
+            self.pos_encoding = self.positional_encoding(position, d_model)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "PositionalEncoding initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
+            raise
 
     def get_angles(self, position: np.ndarray, i: np.ndarray, d_model: int) -> np.ndarray:
-        angles = 1 / np.power(10000, (2 * (i // 2)) / np.float32(d_model))
-        return position * angles
+        try:
+            angles = 1 / np.power(10000, (2 * (i // 2)) / np.float32(d_model))
+            return position * angles
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "PositionalEncoding get_angles failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return np.zeros_like(position)
 
     def positional_encoding(self, position: int, d_model: int) -> tf.Tensor:
-        angle_rads = self.get_angles(
-            np.arange(position)[:, np.newaxis],
-            np.arange(d_model)[np.newaxis, :],
-            d_model
-        )
-        angle_rads[:, 0::2] = np.sin(angle_rads[:, 0::2])
-        angle_rads[:, 1::2] = np.cos(angle_rads[:, 1::2])
-        pos_encoding = angle_rads[np.newaxis, ...]
-        return tf.cast(pos_encoding, dtype=tf.float32)
+        try:
+            angle_rads = self.get_angles(
+                np.arange(position)[:, np.newaxis],
+                np.arange(d_model)[np.newaxis, :],
+                d_model
+            )
+            angle_rads[:, 0::2] = np.sin(angle_rads[:, 0::2])
+            angle_rads[:, 1::2] = np.cos(angle_rads[:, 1::2])
+            pos_encoding = angle_rads[np.newaxis, ...]
+            return tf.cast(pos_encoding, dtype=tf.float32)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "PositionalEncoding computation failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return tf.zeros((1, position, d_model), dtype=tf.float32)
 
     def call(self, inputs: tf.Tensor) -> tf.Tensor:
-        return inputs + self.pos_encoding[:, :tf.shape(inputs)[1], :]
+        try:
+            return inputs + self.pos_encoding[:, :tf.shape(inputs)[1], :]
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "PositionalEncoding call failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return inputs
 
 # --- Transformer Encoder Layer ---
 class TransformerEncoderLayer(layers.Layer):
     def __init__(self, d_model: int, num_heads: int, ff_dim: int, dropout: float = 0.1) -> None:
         super(TransformerEncoderLayer, self).__init__()
-        self.mha = layers.MultiHeadAttention(num_heads=num_heads, key_dim=d_model // num_heads)
-        self.ffn = Sequential([layers.Dense(ff_dim, activation="relu"), layers.Dense(d_model)])
-        self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
-        self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
-        self.dropout1 = layers.Dropout(dropout)
-        self.dropout2 = layers.Dropout(dropout)
+        try:
+            self.mha = layers.MultiHeadAttention(num_heads=num_heads, key_dim=d_model // num_heads)
+            self.ffn = Sequential([layers.Dense(ff_dim, activation="relu"), layers.Dense(d_model)])
+            self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
+            self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
+            self.dropout1 = layers.Dropout(dropout)
+            self.dropout2 = layers.Dropout(dropout)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "TransformerEncoderLayer initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
+            raise
 
     def call(self, x: tf.Tensor, training: bool = None) -> tf.Tensor:
-        attn_output = self.mha(x, x, x)
-        attn_output = self.dropout1(attn_output, training=training)
-        out1 = self.layernorm1(x + attn_output)
-        ffn_output = self.ffn(out1)
-        ffn_output = self.dropout2(ffn_output, training=training)
-        return self.layernorm2(out1 + ffn_output)
+        try:
+            attn_output = self.mha(x, x, x)
+            attn_output = self.dropout1(attn_output, training=training)
+            out1 = self.layernorm1(x + attn_output)
+            ffn_output = self.ffn(out1)
+            ffn_output = self.dropout2(ffn_output, training=training)
+            return self.layernorm2(out1 + ffn_output)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "TransformerEncoderLayer call failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return x
 
-# --- Enhanced Logging System ---
+# --- Enhanced Logging System with Error Tracking ---
 class OdenLogger:
     def __init__(self, config: OdenConfig) -> None:
         self.config = config
         self.logger = self._setup_logger()
         self.log_metrics = {
-            "info_count": 0, "warning_count": 0, "error_count": 0, "critical_count": 0, "last_alert_time": 0.0
+            "info_count": 0, "warning_count": 0, "error_count": 0, "critical_count": 0, "last_alert_time": 0.0,
+            "error_timestamps": deque(maxlen=60)  # Track errors per minute
         }
         self.lock = threading.Lock()
         self.alert_queue = deque(maxlen=100)
 
     def _setup_logger(self) -> logging.Logger:
-        logger = logging.getLogger("Oden")
-        logger.setLevel(logging.INFO)
-        rfh = logging.handlers.RotatingFileHandler(
-            filename=self.config.log_file,
-            maxBytes=self.config.log_max_bytes,
-            backupCount=self.config.log_backup_count
-        )
+        try:
+            logger = logging.getLogger("Oden")
+            logger.setLevel(logging.INFO)
+            rfh = logging.handlers.RotatingFileHandler(
+                filename=self.config.log_file,
+                maxBytes=self.config.log_max_bytes,
+                backupCount=self.config.log_backup_count
+            )
 
-        class StructuredFormatter(logging.Formatter):
-            def format(self, record: logging.LogRecord) -> str:
-                log_dict = {
-                    "timestamp": datetime.datetime.now().isoformat(),
-                    "level": record.levelname,
-                    "message": record.msg % (record.args if record.args else ()),
-                    "module": record.module,
-                    "line": record.lineno,
-                    "process": record.process,
-                    "thread": record.threadName,
-                }
-                if hasattr(record, 'extra'):
-                    log_dict.update(record.extra)
-                return json.dumps(log_dict)
+            class StructuredFormatter(logging.Formatter):
+                def format(self, record: logging.LogRecord) -> str:
+                    log_dict = {
+                        "timestamp": datetime.datetime.now().isoformat(),
+                        "level": record.levelname,
+                        "message": record.msg % (record.args if record.args else ()),
+                        "module": record.module,
+                        "line": record.lineno,
+                        "process": record.process,
+                        "thread": record.threadName,
+                    }
+                    if hasattr(record, 'extra'):
+                        log_dict.update(record.extra)
+                    return json.dumps(log_dict)
 
-        rfh.setFormatter(StructuredFormatter())
-        logger.handlers.clear()
-        logger.addHandler(rfh)
-        ch = logging.StreamHandler(sys.stdout)
-        ch.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
-        logger.addHandler(ch)
-        return logger
+            rfh.setFormatter(StructuredFormatter())
+            logger.handlers.clear()
+            logger.addHandler(rfh)
+            ch = logging.StreamHandler(sys.stdout)
+            ch.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+            logger.addHandler(ch)
+            return logger
+        except Exception as e:
+            print(f"Critical: Logger setup failed: {str(e)}")
+            raise
 
     def log_event(self, level: str, message: str, extra: Optional[Dict[str, Any]] = None) -> None:
         with self.lock:
-            extra = extra or {}
-            getattr(self.logger, level.lower())(message, extra=extra)
-            self._update_metrics(level)
-            self._check_alert_threshold(level, message)
+            try:
+                extra = extra or {}
+                getattr(self.logger, level.lower())(message, extra=extra)
+                self._update_metrics(level)
+                self._check_alert_threshold(level, message)
+            except Exception as e:
+                print(f"Critical: Logging failed: {str(e)}")
 
     def _update_metrics(self, level: str) -> None:
-        level_map = {"INFO": "info_count", "WARNING": "warning_count", "ERROR": "error_count", "CRITICAL": "critical_count"}
-        if level in level_map:
-            self.log_metrics[level_map[level]] += 1
+        try:
+            level_map = {"INFO": "info_count", "WARNING": "warning_count", "ERROR": "error_count", "CRITICAL": "critical_count"}
+            if level in level_map:
+                self.log_metrics[level_map[level]] += 1
+            if level in ("ERROR", "CRITICAL"):
+                current_time = time.time()
+                self.log_metrics["error_timestamps"].append(current_time)
+                error_rate = len([t for t in self.log_metrics["error_timestamps"] if current_time - t < 60]) / 60.0
+                PROM_ERROR_RATE.set(error_rate)
+        except Exception as e:
+            print(f"Critical: Metrics update failed: {str(e)}")
+
+    def _run_async(self, coro):
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(coro)
+        except RuntimeError:
+            def run_coro():
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                new_loop.run_until_complete(coro)
+            threading.Thread(target=run_coro).start()
 
     def _check_alert_threshold(self, level: str, message: str) -> None:
-        current_time = time.time()
-        if level in ("WARNING", "ERROR", "CRITICAL"):
-            self.alert_queue.append((current_time, level, message))
-            severe_count = sum(1 for _, lvl, _ in self.alert_queue if lvl in ("WARNING", "ERROR", "CRITICAL"))
-            severe_recent = sum(1 for t, lvl, _ in self.alert_queue if lvl in ("WARNING", "ERROR", "CRITICAL") and current_time - t < 60)
-            if severe_recent > 10:
-                asyncio.create_task(self._send_log_alert(severe_recent, "High rate of severe logs detected"))
-            if severe_count >= self.config.log_alert_threshold and current_time - self.log_metrics["last_alert_time"] > 3600:
-                asyncio.create_task(self._send_log_alert(severe_count))
-                self.log_metrics["last_alert_time"] = current_time
+        try:
+            current_time = time.time()
+            if level in ("WARNING", "ERROR", "CRITICAL"):
+                self.alert_queue.append((current_time, level, message))
+                severe_count = sum(1 for _, lvl, _ in self.alert_queue if lvl in ("WARNING", "ERROR", "CRITICAL"))
+                severe_recent = sum(1 for t, lvl, _ in self.alert_queue if lvl in ("WARNING", "ERROR", "CRITICAL") and current_time - t < 60)
+                if severe_recent > 10:
+                    self._run_async(self._send_log_alert(severe_recent, "High rate of severe logs detected"))
+                if severe_count >= self.config.log_alert_threshold and current_time - self.log_metrics["last_alert_time"] > 3600:
+                    self._run_async(self._send_log_alert(severe_count))
+                    self.log_metrics["last_alert_time"] = current_time
+        except Exception as e:
+            print(f"Critical: Alert threshold check failed: {str(e)}")
 
     async def _send_log_alert(self, count: int, extra_msg: str = "") -> None:
-        msg = f"High volume of logs: {count} warnings/errors. {extra_msg}"
-        await send_notification({"log_alert": msg})
+        try:
+            msg = f"High volume of logs: {count} warnings/errors. {extra_msg}"
+            await send_notification({"log_alert": msg})
+        except Exception as e:
+            print(f"Critical: Log alert sending failed: {str(e)}")
 
     async def report_metrics(self) -> None:
         while STATE.active:
-            with self.lock:
-                self.logger.info("Logging metrics report", extra={"metrics": self.log_metrics.copy(), "alert_queue_size": len(self.alert_queue)})
-            await asyncio.sleep(self.config.log_metrics_interval)
+            try:
+                with self.lock:
+                    self.logger.info("Logging metrics report", extra={"metrics": self.log_metrics.copy(), "alert_queue_size": len(self.alert_queue)})
+                await asyncio.sleep(self.config.log_metrics_interval)
+            except Exception as e:
+                self.logger.error("Metrics reporting failed", extra={"error": str(e), "traceback": traceback.format_exc()})
 
 # --- Global State Management ---
 class SystemState:
     def __init__(self) -> None:
-        self.active = True
-        self.bad_ips: set = set(["1.2.3.4", "5.6.7.8"])
-        self.effectiveness: Dict[str, Dict[str, float]] = {}
-        self.metrics_history = deque(maxlen=CONFIG.metrics_history_size)
-        self.anomaly_history = deque(maxlen=CONFIG.metrics_history_size)
-        self.cipher = Fernet(Fernet.generate_key())
-        self.cluster_model = None
-        self.logger = OdenLogger(CONFIG)
-        self.last_action_time = 0.0
-        self.process_hash = self._compute_process_hash()
+        try:
+            self.active = True
+            self.bad_ips: set = set(["1.2.3.4", "5.6.7.8"])
+            self.effectiveness: Dict[str, Dict[str, float]] = {}
+            self.metrics_history = deque(maxlen=CONFIG.metrics_history_size)
+            self.anomaly_history = deque(maxlen=CONFIG.metrics_history_size)
+            self.cipher = Fernet(Fernet.generate_key())
+            self.cluster_model = None
+            self.logger = OdenLogger(CONFIG)
+            self.last_action_time = 0.0
+            self.process_hash = self._compute_process_hash()
+            self.error_count = 0
+        except Exception as e:
+            print(f"Critical: SystemState initialization failed: {str(e)}")
+            raise
 
     def _compute_process_hash(self) -> str:
-        import hashlib
-        return hashlib.sha256(str(os.getpid()).encode()).hexdigest()
+        try:
+            import hashlib
+            return hashlib.sha256(str(os.getpid()).encode()).hexdigest()
+        except Exception as e:
+            self.logger.log_event("ERROR", "Process hash computation failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return ""
 
 STATE = SystemState()
 logger = STATE.logger.logger
@@ -299,41 +381,50 @@ class Clearance:
 
     @staticmethod
     def verify() -> bool:
-        import hashlib
-        current_hash = hashlib.sha256(str(os.getpid()).encode()).hexdigest()
-        if Clearance.CURRENT_STATE == Clearance.SYSTEM_COMPROMISED or current_hash != STATE.process_hash:
-            STATE.logger.log_event("WARNING", "System compromised: Security check failed")
+        try:
+            import hashlib
+            current_hash = hashlib.sha256(str(os.getpid()).encode()).hexdigest()
+            if Clearance.CURRENT_STATE == Clearance.SYSTEM_COMPROMISED or current_hash != STATE.process_hash:
+                STATE.logger.log_event("WARNING", "System compromised: Security check failed")
+                return False
+            STATE.logger.log_event("INFO", "Security clearance verified")
+            return True
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Security clearance verification failed", {"error": str(e), "traceback": traceback.format_exc()})
             return False
-        STATE.logger.log_event("INFO", "Security clearance verified")
-        return True
 
 # --- Enhanced Anomaly Detection ---
 class SignatureDetector:
     def __init__(self, signature_file: str) -> None:
-        self.signatures = self.load_signatures(signature_file)
-        self.metrics_map = {
-            "cpu": 0, "mem": 1, "disk": 2, "net_sent": 3, "net_recv": 4, "processes": 5,
-            "connections": 6, "bad_conns": 7, "max_cpu": 8, "max_mem": 9, "disk_io": 10,
-            "latency": 11, "user_logins": 12
-        }
+        try:
+            self.signatures = self.load_signatures(signature_file)
+            self.metrics_map = {
+                "cpu": 0, "mem": 1, "disk": 2, "net_sent": 3, "net_recv": 4, "processes": 5,
+                "connections": 6, "bad_conns": 7, "max_cpu": 8, "max_mem": 9, "disk_io": 10,
+                "latency": 11, "user_logins": 12
+            }
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "SignatureDetector initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
+            self.signatures = []
 
     def load_signatures(self, file_path: str) -> List[Dict[str, Any]]:
         try:
             with open(file_path, "r") as f:
                 return json.load(f)
         except Exception as e:
-            STATE.logger.log_event("ERROR", f"Failed to load signatures: {str(e)}")
+            STATE.logger.log_event("ERROR", f"Failed to load signatures: {str(e)}", {"traceback": traceback.format_exc()})
             return []
 
     def check_metrics(self, metrics: np.ndarray) -> List[str]:
-        detected = []
         try:
+            detected = []
             for sig in self.signatures:
                 if self.match_signature(sig, metrics):
                     detected.append(sig["name"])
+            return detected
         except Exception as e:
-            STATE.logger.log_event("ERROR", f"Signature check failed: {str(e)}", {"traceback": traceback.format_exc()})
-        return detected
+            STATE.logger.log_event("ERROR", "Signature check failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return []
 
     def match_signature(self, sig: Dict[str, Any], metrics: np.ndarray) -> bool:
         try:
@@ -345,623 +436,787 @@ class SignatureDetector:
                 if metrics[index] > threshold:
                     return True
             return False
-        except Exception:
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Signature matching failed", {"error": str(e), "traceback": traceback.format_exc()})
             return False
 
 # --- Holographic Memory ---
 class HolographicMemory:
     def __init__(self, size: int = CONFIG.memory_size, dim: int = 32) -> None:
-        self.memory = np.zeros((size, dim), dtype=np.float32)
-        self.index = 0
-        self.size = size
-        self.dim = dim
+        try:
+            self.memory = np.zeros((size, dim), dtype=np.float32)
+            self.index = 0
+            self.size = size
+            self.dim = dim
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "HolographicMemory initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def add(self, vector: np.ndarray) -> None:
-        if self.index < self.size:
-            norm_vector = vector / (np.linalg.norm(vector) + 1e-8)
-            self.memory[self.index] = norm_vector
-            self.index += 1
+        try:
+            if self.index < self.size:
+                norm_vector = vector / (np.linalg.norm(vector) + 1e-8)
+                self.memory[self.index] = norm_vector
+                self.index += 1
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "HolographicMemory add failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def query(self, partial_vector: np.ndarray, top_k: int = 5) -> Tuple[np.ndarray, np.ndarray]:
-        if self.index == 0:
+        try:
+            if self.index == 0:
+                return np.array([]), np.array([])
+            norm_partial = partial_vector / (np.linalg.norm(partial_vector) + 1e-8)
+            similarities = np.dot(self.memory[:self.index], norm_partial)
+            indices = np.argsort(similarities)[-top_k:][::-1]
+            return indices, similarities[indices]
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "HolographicMemory query failed", {"error": str(e), "traceback": traceback.format_exc()})
             return np.array([]), np.array([])
-        norm_partial = partial_vector / (np.linalg.norm(partial_vector) + 1e-8)
-        similarities = np.dot(self.memory[:self.index], norm_partial)
-        indices = np.argsort(similarities)[-top_k:][::-1]
-        return indices, similarities[indices]
 
 # --- Consciousness Module ---
 class ConsciousnessModule:
     def __init__(self, brain: 'OdenBrain', policy: 'OdenPolicy', cot: 'OdenCoT') -> None:
-        self.brain = brain
-        self.policy = policy
-        self.cot = cot
-        self.self_state = np.zeros(13, dtype=np.float32)  # Adjusted for Oden-only metrics
-        self.emotional_valence = 0.0  # -1 (stress) to 1 (calm)
-        self.homeostatic_target = np.array([50.0, 50.0, 50.0, 0, 0, 100, 50, 0, 50.0, 50.0, 1e6, 5.0, 1])  # Adjusted ideal state
-        self.reflection_history = deque(maxlen=50)
+        try:
+            self.brain = brain
+            self.policy = policy
+            self.cot = cot
+            self.self_state = np.zeros(13, dtype=np.float32)
+            self.emotional_valence = 0.0
+            self.homeostatic_target = np.array([50.0, 50.0, 50.0, 0, 0, 100, 50, 0, 50.0, 50.0, 1e6, 5.0, 1])
+            self.reflection_history = deque(maxlen=50)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "ConsciousnessModule initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def update_self_state(self, metrics: np.ndarray) -> None:
-        self.self_state = metrics.copy()
-        anomaly_score, _, _, _ = self.brain.predict(metrics)
-        deviation = np.mean(np.abs(metrics - self.homeostatic_target) / (self.homeostatic_target + 1e-8))
-        self.emotional_valence = np.clip(1.0 - (anomaly_score + deviation), -1.0, 1.0)
-        STATE.logger.log_event("INFO", f"Self-state updated. Emotional valence: {self.emotional_valence:.2f}")
+        try:
+            self.self_state = metrics.copy()
+            anomaly_score, _, _, _ = self.brain.predict(metrics)
+            deviation = np.mean(np.abs(metrics - self.homeostatic_target) / (self.homeostatic_target + 1e-8))
+            self.emotional_valence = np.clip(1.0 - (anomaly_score + deviation), -1.0, 1.0)
+            STATE.logger.log_event("INFO", f"Self-state updated. Emotional valence: {self.emotional_valence:.2f}")
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Self-state update failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def assess_emotional_impact(self, action: str, predicted_metrics: np.ndarray) -> float:
-        current_deviation = np.mean(np.abs(self.self_state - self.homeostatic_target) / (self.homeostatic_target + 1e-8))
-        predicted_deviation = np.mean(np.abs(predicted_metrics - self.homeostatic_target) / (self.homeostatic_target + 1e-8))
-        valence_shift = current_deviation - predicted_deviation
-        return valence_shift * 0.5 + self.emotional_valence * 0.5
+        try:
+            current_deviation = np.mean(np.abs(self.self_state - self.homeostatic_target) / (self.homeostatic_target + 1e-8))
+            predicted_deviation = np.mean(np.abs(predicted_metrics - self.homeostatic_target) / (self.homeostatic_target + 1e-8))
+            valence_shift = current_deviation - predicted_deviation
+            return valence_shift * 0.5 + self.emotional_valence * 0.5
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Emotional impact assessment failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return 0.0
 
     def reflect(self, action: str, reward: float, pre_metrics: np.ndarray, post_metrics: np.ndarray) -> Dict[str, Any]:
-        reflection = {
-            "action": action,
-            "reward": reward,
-            "pre_valence": self.emotional_valence,
-            "post_valence": self.assess_emotional_impact(action, post_metrics),
-            "self_change": np.mean(post_metrics - pre_metrics)
-        }
-        self.reflection_history.append(reflection)
-        STATE.logger.log_event("INFO", f"Reflection: {reflection}")
-        return reflection
+        try:
+            reflection = {
+                "action": action,
+                "reward": reward,
+                "pre_valence": self.emotional_valence,
+                "post_valence": self.assess_emotional_impact(action, post_metrics),
+                "self_change": np.mean(post_metrics - pre_metrics)
+            }
+            self.reflection_history.append(reflection)
+            STATE.logger.log_event("INFO", f"Reflection: {reflection}")
+            return reflection
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Reflection failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return {}
 
     def imagine_future(self, current_metrics: np.ndarray) -> Tuple[str, float]:
-        best_action, best_value = None, -float('inf')
-        for action in ACTIONS:
-            one_hot_action = np.zeros(len(ACTIONS))
-            one_hot_action[ACTIONS.index(action)] = 1
-            sequence_raw = list(STATE.metrics_history)[-3:] if len(STATE.metrics_history) >= 3 else [current_metrics] * 3
-            normalized_sequence = self.brain.scaler.transform(np.array(sequence_raw))
-            predicted_metrics = dynamics.model.predict([normalized_sequence[None, :], one_hot_action[None, :]], verbose=0)[0]
-            raw_predicted = self.brain.scaler.inverse_transform([predicted_metrics])[0]
-            value = self.assess_emotional_impact(action, raw_predicted)
-            if value > best_value:
-                best_value = value
-                best_action = action
-        return best_action, best_value
+        try:
+            best_action, best_value = None, -float('inf')
+            for action in ACTIONS:
+                one_hot_action = np.zeros(len(ACTIONS))
+                one_hot_action[ACTIONS.index(action)] = 1
+                sequence_raw = list(STATE.metrics_history)[-3:] if len(STATE.metrics_history) >= 3 else [current_metrics] * 3
+                normalized_sequence = self.brain.scaler.transform(np.array(sequence_raw))
+                predicted_metrics = dynamics.model.predict([normalized_sequence[None, :], one_hot_action[None, :]], verbose=0)[0]
+                raw_predicted = self.brain.scaler.inverse_transform([predicted_metrics])[0]
+                value = self.assess_emotional_impact(action, raw_predicted)
+                if value > best_value:
+                    best_value = value
+                    best_action = action
+            return best_action, best_value
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Future imagination failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return "Investigate", 0.0
 
 # --- Oden Brain ---
 class OdenBrain:
     def __init__(self) -> None:
-        # Initialize optimizer first to use in model build
-        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-            initial_learning_rate=CONFIG.learning_rate,
-            decay_steps=1000,
-            decay_rate=0.96,
-            staircase=True)
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
-        self.model = self._build_model()
-        self.holo_memory = HolographicMemory()
-        self.memory = deque(maxlen=CONFIG.memory_size)
-        self.epsilon = CONFIG.epsilon_initial
-        self.scaler = SCALER
-        self.scaler_fitted = False
-        self.mse_threshold = None
-        self.cluster_model = None
-        self.mse_mean = 0.0
-        self.mse_var = 0.0
-        self.mse_count = 0
-        self.batch_size = 32
+        try:
+            lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+                initial_learning_rate=CONFIG.learning_rate,
+                decay_steps=1000,
+                decay_rate=0.96,
+                staircase=True)
+            self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
+            self.model = self._build_model()
+            self.holo_memory = HolographicMemory()
+            self.memory = deque(maxlen=CONFIG.memory_size)
+            self.epsilon = CONFIG.epsilon_initial
+            self.scaler = SCALER
+            self.scaler_fitted = False
+            self.mse_threshold = None
+            self.cluster_model = None
+            self.mse_mean = 0.0
+            self.mse_var = 0.0
+            self.mse_count = 0
+            self.batch_size = 32
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "OdenBrain initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
+            raise
 
     def _build_model(self) -> tf.keras.Model:
-        # Use MirroredStrategy if GPUs are available for distributed training
-        strategy = tf.distribute.MirroredStrategy() if tf.config.list_physical_devices('GPU') else None
-        def build():
-            inputs = Input(shape=(CONFIG.metrics_window, 13))  # Adjusted for Oden-only metrics
-            inputs_transposed = layers.Lambda(lambda x: tf.transpose(x, perm=[0, 2, 1]))(inputs)
-            fft_transposed = layers.Lambda(lambda x: tf.signal.fft(tf.cast(x, tf.complex64)))(inputs_transposed)
-            fft = layers.Lambda(lambda x: tf.transpose(x, perm=[0, 2, 1]))(fft_transposed)
-            fft_real = layers.Lambda(lambda x: tf.math.real(x))(fft)
-            fft_imag = layers.Lambda(lambda x: tf.math.imag(x))(fft)
-            fft_features = layers.Concatenate(axis=-1)([fft_real, fft_imag])
-            combined_inputs = layers.Concatenate(axis=-1)([inputs, fft_features])
-            conv1 = layers.Conv1D(32, 3, dilation_rate=1, padding='same', activation='relu')(combined_inputs)
-            conv2 = layers.Conv1D(32, 3, dilation_rate=2, padding='same', activation='relu')(combined_inputs)
-            conv3 = layers.Conv1D(32, 3, dilation_rate=4, padding='same', activation='relu')(combined_inputs)
-            conv_concat = layers.Concatenate()([conv1, conv2, conv3])
-            x = layers.Dense(64)(conv_concat)
-            x = PositionalEncoding(CONFIG.metrics_window, 64)(x)
-            x = TransformerEncoderLayer(d_model=64, num_heads=4, ff_dim=128)(x)
-            x = layers.LSTM(32, return_sequences=True, dropout=0.2, recurrent_dropout=0.2)(x)
-            recon_out = layers.TimeDistributed(layers.Dense(13))(x)  # Adjusted for Oden-only metrics
-            pooled = layers.GlobalAveragePooling1D()(x)
-            class_out = layers.Dense(1, activation="sigmoid", name="anomaly_score")(pooled)
-            model = Model(inputs, [recon_out, class_out, pooled])
-            model.compile(
-                optimizer=self.optimizer,
-                loss=["mse", "binary_crossentropy", None],
-                loss_weights=[0.6, 0.4, 0.0]
-            )
-            return model
+        try:
+            strategy = tf.distribute.MirroredStrategy() if tf.config.list_physical_devices('GPU') else None
+            def build():
+                inputs = Input(shape=(CONFIG.metrics_window, 13))
+                inputs_transposed = layers.Lambda(lambda x: tf.transpose(x, perm=[0, 2, 1]))(inputs)
+                fft_transposed = layers.Lambda(lambda x: tf.signal.fft(tf.cast(x, tf.complex64)))(inputs_transposed)
+                fft = layers.Lambda(lambda x: tf.transpose(x, perm=[0, 2, 1]))(fft_transposed)
+                fft_real = layers.Lambda(lambda x: tf.math.real(x))(fft)
+                fft_imag = layers.Lambda(lambda x: tf.math.imag(x))(fft)
+                fft_features = layers.Concatenate(axis=-1)([fft_real, fft_imag])
+                combined_inputs = layers.Concatenate(axis=-1)([inputs, fft_features])
+                conv1 = layers.Conv1D(32, 3, dilation_rate=1, padding='same', activation='relu')(combined_inputs)
+                conv2 = layers.Conv1D(32, 3, dilation_rate=2, padding='same', activation='relu')(combined_inputs)
+                conv3 = layers.Conv1D(32, 3, dilation_rate=4, padding='same', activation='relu')(combined_inputs)
+                conv_concat = layers.Concatenate()([conv1, conv2, conv3])
+                x = layers.Dense(64)(conv_concat)
+                x = PositionalEncoding(CONFIG.metrics_window, 64)(x)
+                x = TransformerEncoderLayer(d_model=64, num_heads=4, ff_dim=128)(x)
+                x = layers.LSTM(32, return_sequences=True, dropout=0.2, recurrent_dropout=0.2)(x)
+                recon_out = layers.TimeDistributed(layers.Dense(13))(x)
+                pooled = layers.GlobalAveragePooling1D()(x)
+                class_out = layers.Dense(1, activation="sigmoid", name="anomaly_score")(pooled)
+                model = Model(inputs, [recon_out, class_out, pooled])
+                model.compile(
+                    optimizer=self.optimizer,
+                    loss=["mse", "binary_crossentropy", None],
+                    loss_weights=[0.6, 0.4, 0.0]
+                )
+                return model
 
-        if strategy:
-            with strategy.scope():
-                model = build()
-        else:
-            model = build()
-        return model
+            if strategy:
+                with strategy.scope():
+                    return build()
+            return build()
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Model building failed", {"error": str(e), "traceback": traceback.format_exc()})
+            raise
 
     def predict(self, metrics: np.ndarray, use_history: bool = True, mc_runs: int = 10) -> Tuple[float, float, float, float]:
-        padded = self._prepare_metrics(metrics, use_history)
-        if self.scaler_fitted:
-            normalized = self.scaler.transform(padded).astype(np.float32)
-        else:
-            normalized = padded.astype(np.float32)
-            STATE.logger.log_event("DEBUG", "Scaler not fitted; using raw metrics")
-        batch = tf.convert_to_tensor(normalized[None, :], dtype=tf.float32)
-        recon_list = []
-        class_list = []
-        pooled_list = []
-        for _ in range(mc_runs):
-            recon, class_prob, pooled = self.model(batch, training=True)
-            recon_list.append(recon)
-            class_list.append(class_prob)
-            pooled_list.append(pooled)
-        recon_avg = tf.reduce_mean(tf.stack(recon_list), axis=0)
-        class_avg = tf.reduce_mean(tf.stack(class_list), axis=0)
-        pooled_avg = tf.reduce_mean(tf.stack(pooled_list), axis=0)
-        mse = tf.reduce_mean(tf.square(batch - recon_avg), axis=[1, 2]).numpy()[0]
-        anomaly_score = self._scale_mse(mse)
-        class_score = class_avg[0][0].numpy()
-        cluster_distance = self._compute_cluster_distance(normalized) if self.cluster_model else 0.0
-        mse_runs = tf.stack([tf.reduce_mean(tf.square(batch - r), axis=[1,2]) for r in recon_list], axis=0)
-        uncertainty = tf.math.reduce_std(mse_runs, axis=0).numpy()[0]
-        if self.holo_memory.index > 0:
-            indices, similarities = self.holo_memory.query(pooled_avg[0], top_k=5)
-            memory_anomaly = 1 - np.mean(np.clip(similarities, 0, 1)) if len(similarities) > 0 else 1.0
-            anomaly_score = max(anomaly_score, memory_anomaly)
-        if 'consciousness' in globals():
-            consciousness.update_self_state(metrics)
-        return anomaly_score, class_score, cluster_distance, uncertainty
+        try:
+            padded = self._prepare_metrics(metrics, use_history)
+            if self.scaler_fitted:
+                normalized = self.scaler.transform(padded).astype(np.float32)
+            else:
+                normalized = padded.astype(np.float32)
+                STATE.logger.log_event("DEBUG", "Scaler not fitted; using raw metrics")
+            batch = tf.convert_to_tensor(normalized[None, :], dtype=tf.float32)
+            recon_list = []
+            class_list = []
+            pooled_list = []
+            for _ in range(mc_runs):
+                recon, class_prob, pooled = self.model(batch, training=True)
+                recon_list.append(recon)
+                class_list.append(class_prob)
+                pooled_list.append(pooled)
+            recon_avg = tf.reduce_mean(tf.stack(recon_list), axis=0)
+            class_avg = tf.reduce_mean(tf.stack(class_list), axis=0)
+            pooled_avg = tf.reduce_mean(tf.stack(pooled_list), axis=0)
+            mse = tf.reduce_mean(tf.square(batch - recon_avg), axis=[1, 2]).numpy()[0]
+            anomaly_score = self._scale_mse(mse)
+            class_score = class_avg[0][0].numpy()
+            cluster_distance = self._compute_cluster_distance(normalized) if self.cluster_model else 0.0
+            mse_runs = tf.stack([tf.reduce_mean(tf.square(batch - r), axis=[1,2]) for r in recon_list], axis=0)
+            uncertainty = tf.math.reduce_std(mse_runs, axis=0).numpy()[0]
+            if self.holo_memory.index > 0:
+                indices, similarities = self.holo_memory.query(pooled_avg[0], top_k=5)
+                memory_anomaly = 1 - np.mean(np.clip(similarities, 0, 1)) if len(similarities) > 0 else 1.0
+                anomaly_score = max(anomaly_score, memory_anomaly)
+            if 'consciousness' in globals():
+                consciousness.update_self_state(metrics)
+            return anomaly_score, class_score, cluster_distance, uncertainty
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Prediction failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return 0.0, 0.0, 0.0, 0.0
 
     def _compute_cluster_distance(self, normalized: np.ndarray) -> float:
-        centers = self.cluster_model.cluster_centers_
-        distances = np.linalg.norm(centers - normalized[-1], axis=1)
-        return np.min(distances)
+        try:
+            centers = self.cluster_model.cluster_centers_
+            distances = np.linalg.norm(centers - normalized[-1], axis=1)
+            return np.min(distances)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Cluster distance computation failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return 0.0
 
     def train(self, metrics: np.ndarray, label: Optional[float] = None, batch_train: bool = False) -> None:
-        padded = self._prepare_metrics(metrics, True)
-        if not self.scaler_fitted:
-            self.scaler.fit(padded)
-            self.scaler_fitted = True
-        else:
-            self.scaler.partial_fit(padded)
-        normalized = self.scaler.transform(padded).astype(np.float32)
-        self.memory.append((normalized, label))
+        try:
+            padded = self._prepare_metrics(metrics, True)
+            if not self.scaler_fitted:
+                self.scaler.fit(padded)
+                self.scaler_fitted = True
+            else:
+                self.scaler.partial_fit(padded)
+            normalized = self.scaler.transform(padded).astype(np.float32)
+            self.memory.append((normalized, label))
 
-        if len(self.memory) >= self.batch_size:
-            batch_data = random.sample(self.memory, self.batch_size)
-            X = np.array([d[0] for d in batch_data])
-            y_recon = X
-            y_class = np.array([d[1] if d[1] is not None else self.predict(d[0])[1] for d in batch_data]).reshape(-1, 1)
-            y_pooled = np.zeros((self.batch_size, 32))
-            loss = self.model.train_on_batch(X, [y_recon, y_class, y_pooled])
-            STATE.logger.log_event("INFO", f"Online training completed, loss: {loss}")
+            if len(self.memory) >= self.batch_size:
+                batch_data = random.sample(self.memory, self.batch_size)
+                X = np.array([d[0] for d in batch_data])
+                y_recon = X
+                y_class = np.array([d[1] if d[1] is not None else self.predict(d[0])[1] for d in batch_data]).reshape(-1, 1)
+                y_pooled = np.zeros((self.batch_size, 32))
+                loss = self.model.train_on_batch(X, [y_recon, y_class, y_pooled])
+                STATE.logger.log_event("INFO", f"Online training completed, loss: {loss}")
 
-        if len(self.memory) >= 50 and (self.cluster_model is None or batch_train):
-            data = np.array([m[0][-1] for m in self.memory])
-            self.cluster_model = KMeans(n_clusters=5).fit(data)
-            STATE.logger.log_event("INFO", "Clustering model updated")
+            if len(self.memory) >= 50 and (self.cluster_model is None or batch_train):
+                data = np.array([m[0][-1] for m in self.memory])
+                self.cluster_model = KMeans(n_clusters=5).fit(data)
+                STATE.logger.log_event("INFO", "Clustering model updated")
 
-        mse = tf.reduce_mean(tf.square(normalized - self.model(normalized[None, :])[0])).numpy()
-        self._update_mse_stats(mse)
+            mse = tf.reduce_mean(tf.square(normalized - self.model(normalized[None, :])[0])).numpy()
+            self._update_mse_stats(mse)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Training failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def _update_mse_stats(self, mse: float) -> None:
-        self.mse_count += 1
-        delta = mse - self.mse_mean
-        self.mse_mean += delta / self.mse_count
-        self.mse_var += delta * (mse - self.mse_mean)
-        self.mse_threshold = self.mse_mean + 3 * np.sqrt(self.mse_var / max(1, self.mse_count - 1)) if self.mse_count > 1 else mse * 10
+        try:
+            self.mse_count += 1
+            delta = mse - self.mse_mean
+            self.mse_mean += delta / self.mse_count
+            self.mse_var += delta * (mse - self.mse_mean)
+            self.mse_threshold = self.mse_mean + 3 * np.sqrt(self.mse_var / max(1, self.mse_count - 1)) if self.mse_count > 1 else mse * 10
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "MSE stats update failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def _scale_mse(self, mse: float) -> float:
-        if self.mse_threshold is None:
-            return min(mse * 100, 1.0)
-        return min(mse / self.mse_threshold, 1.0)
+        try:
+            if self.mse_threshold is None:
+                return min(mse * 100, 1.0)
+            return min(mse / self.mse_threshold, 1.0)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "MSE scaling failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return 0.0
 
     def _prepare_metrics(self, metrics: np.ndarray, use_history: bool) -> np.ndarray:
-        if use_history:
-            STATE.metrics_history.append(metrics)
-            history = list(STATE.metrics_history)
-            if len(history) < CONFIG.metrics_window:
-                padded = np.zeros((CONFIG.metrics_window, 13), dtype=np.float32)
-                padded[-len(history):] = history
+        try:
+            if use_history:
+                STATE.metrics_history.append(metrics)
+                history = list(STATE.metrics_history)
+                if len(history) < CONFIG.metrics_window:
+                    padded = np.zeros((CONFIG.metrics_window, 13), dtype=np.float32)
+                    padded[-len(history):] = history
+                else:
+                    padded = np.array(history[-CONFIG.metrics_window:], dtype=np.float32)
             else:
-                padded = np.array(history[-CONFIG.metrics_window:], dtype=np.float32)
-        else:
-            padded = metrics.astype(np.float32)
-        return padded
+                padded = metrics.astype(np.float32)
+            return padded
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Metrics preparation failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return np.zeros((CONFIG.metrics_window, 13), dtype=np.float32)
 
     def decay_epsilon(self) -> None:
-        self.epsilon = max(CONFIG.epsilon_min, self.epsilon * CONFIG.epsilon_decay)
+        try:
+            self.epsilon = max(CONFIG.epsilon_min, self.epsilon * CONFIG.epsilon_decay)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Epsilon decay failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def validate(self, validation_data: Optional[np.ndarray] = None) -> bool:
-        if validation_data is None and len(STATE.metrics_history) >= CONFIG.metrics_window:
-            validation_data = np.array(list(STATE.metrics_history)[-CONFIG.metrics_window:], dtype=np.float32)
-        elif validation_data is None:
-            validation_data = np.random.rand(CONFIG.metrics_window, 13).astype(np.float32)
-        if self.scaler_fitted:
-            validation_data = self.scaler.transform(validation_data).astype(np.float32)
-        batch = tf.convert_to_tensor(validation_data[None, :], dtype=tf.float32)
-        recon, _, _ = self.model.predict(batch, verbose=0)
-        mse = tf.reduce_mean(tf.square(batch - recon)).numpy()
-        threshold = self.mse_threshold or 0.1
-        return mse < threshold
+        try:
+            if validation_data is None and len(STATE.metrics_history) >= CONFIG.metrics_window:
+                validation_data = np.array(list(STATE.metrics_history)[-CONFIG.metrics_window:], dtype=np.float32)
+            elif validation_data is None:
+                validation_data = np.random.rand(CONFIG.metrics_window, 13).astype(np.float32)
+            if self.scaler_fitted:
+                validation_data = self.scaler.transform(validation_data).astype(np.float32)
+            batch = tf.convert_to_tensor(validation_data[None, :], dtype=tf.float32)
+            recon, _, _ = self.model.predict(batch, verbose=0)
+            mse = tf.reduce_mean(tf.square(batch - recon)).numpy()
+            threshold = self.mse_threshold or 0.1
+            return mse < threshold
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Model validation failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return False
 
-# --- Prioritized Replay Buffer for OdenPolicy ---
+# --- Prioritized Replay Buffer ---
 class PrioritizedReplayBuffer:
     def __init__(self, capacity: int):
-        self.capacity = capacity
-        self.buffer = []
-        self.priorities = np.zeros((capacity,), dtype=np.float32)
-        self.pos = 0
+        try:
+            self.capacity = capacity
+            self.buffer = []
+            self.priorities = np.zeros((capacity,), dtype=np.float32)
+            self.pos = 0
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "PrioritizedReplayBuffer initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def add(self, experience: Tuple, error: float):
-        max_priority = self.priorities.max() if self.buffer else 1.0
-        if len(self.buffer) < self.capacity:
-            self.buffer.append(experience)
-        else:
-            self.buffer[self.pos] = experience
-        self.priorities[self.pos] = max(max_priority, error)
-        self.pos = (self.pos + 1) % self.capacity
+        try:
+            max_priority = self.priorities.max() if self.buffer else 1.0
+            if len(self.buffer) < self.capacity:
+                self.buffer.append(experience)
+            else:
+                self.buffer[self.pos] = experience
+            self.priorities[self.pos] = max(max_priority, error)
+            self.pos = (self.pos + 1) % self.capacity
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Replay buffer add failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def sample(self, batch_size: int, alpha: float = 0.6):
-        if len(self.buffer) == self.capacity:
-            prios = self.priorities
-        else:
-            prios = self.priorities[:self.pos]
-        probs = prios ** alpha
-        probs /= probs.sum()
-        indices = np.random.choice(len(self.buffer), batch_size, p=probs)
-        samples = [self.buffer[idx] for idx in indices]
-        return samples, indices
+        try:
+            if len(self.buffer) == self.capacity:
+                prios = self.priorities
+            else:
+                prios = self.priorities[:self.pos]
+            probs = prios ** alpha
+            probs /= probs.sum()
+            indices = np.random.choice(len(self.buffer), batch_size, p=probs)
+            samples = [self.buffer[idx] for idx in indices]
+            return samples, indices
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Replay buffer sample failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return [], []
 
     def update(self, indices: List[int], errors: List[float]):
-        for idx, error in zip(indices, errors):
-            self.priorities[idx] = error
+        try:
+            for idx, error in zip(indices, errors):
+                self.priorities[idx] = error
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Replay buffer update failed", {"error": str(e), "traceback": traceback.format_exc()})
 
-# --- Oden Policy (Dueling DQN with Prioritized Experience Replay) ---
+# --- Oden Policy ---
 class OdenPolicy:
     def __init__(self) -> None:
-        self.gamma = 0.97
-        self.epsilon = CONFIG.epsilon_initial
-        self.epsilon_min = CONFIG.epsilon_min
-        self.epsilon_decay = CONFIG.epsilon_decay
-        self.learning_rate = CONFIG.learning_rate
-        self.batch_size = 64
-        self.target_update_freq = 25
-        self.q_model = self._build_model()
-        self.target_model = self._build_model()
-        self.update_target_model()
-        self.steps = 0
-        self.memory = PrioritizedReplayBuffer(capacity=10000)
-        self.beta = 0.4
+        try:
+            self.gamma = 0.97
+            self.epsilon = CONFIG.epsilon_initial
+            self.epsilon_min = CONFIG.epsilon_min
+            self.epsilon_decay = CONFIG.epsilon_decay
+            self.learning_rate = CONFIG.learning_rate
+            self.batch_size = 64
+            self.target_update_freq = 25
+            self.q_model = self._build_model()
+            self.target_model = self._build_model()
+            self.update_target_model()
+            self.steps = 0
+            self.memory = PrioritizedReplayBuffer(capacity=10000)
+            self.beta = 0.4
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "OdenPolicy initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
+            raise
 
     def _build_model(self) -> tf.keras.Model:
-        state_input = Input(shape=(5,))
-        dense1 = layers.Dense(256, activation='relu')(state_input)
-        dense2 = layers.Dense(256, activation='relu')(dense1)
-        value = layers.Dense(1)(dense2)
-        advantage = layers.Dense(len(ACTIONS))(dense2)
-        def combine_streams(x):
-            v, a = x
-            return v + (a - tf.reduce_mean(a, axis=1, keepdims=True))
-        q_values = layers.Lambda(combine_streams)([value, advantage])
-        model = Model(state_input, q_values)
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.learning_rate), loss='mse')
-        return model
+        try:
+            state_input = Input(shape=(5,))
+            dense1 = layers.Dense(256, activation='relu')(state_input)
+            dense2 = layers.Dense(256, activation='relu')(dense1)
+            value = layers.Dense(1)(dense2)
+            advantage = layers.Dense(len(ACTIONS))(dense2)
+            def combine_streams(x):
+                v, a = x
+                return v + (a - tf.reduce_mean(a, axis=1, keepdims=True))
+            q_values = layers.Lambda(combine_streams)([value, advantage])
+            model = Model(state_input, q_values)
+            model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.learning_rate), loss='mse')
+            return model
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Policy model building failed", {"error": str(e), "traceback": traceback.format_exc()})
+            raise
 
     def update_target_model(self) -> None:
-        self.target_model.set_weights(self.q_model.get_weights())
+        try:
+            self.target_model.set_weights(self.q_model.get_weights())
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Target model update failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def choose_action(self, state: Tuple[int, int, int, int, int]) -> str:
-        if random.random() < self.epsilon:
+        try:
+            if random.random() < self.epsilon:
+                return random.choice(ACTIONS)
+            q_values = self.q_model.predict(np.array([state]), verbose=0)[0]
+            if 'consciousness' in globals():
+                valence = consciousness.emotional_valence
+                q_values = q_values * (1 + valence * 0.2)
+            return ACTIONS[np.argmax(q_values)]
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Action selection failed", {"error": str(e), "traceback": traceback.format_exc()})
             return random.choice(ACTIONS)
-        q_values = self.q_model.predict(np.array([state]), verbose=0)[0]
-        if 'consciousness' in globals():
-            valence = consciousness.emotional_valence
-            q_values = q_values * (1 + valence * 0.2)
-        return ACTIONS[np.argmax(q_values)]
 
     def learn(self, state: Tuple[int, int, int, int, int], action: str, reward: float,
               next_state: Tuple[int, int, int, int, int]) -> None:
-        current_q = self.q_model.predict(np.array([state]), verbose=0)[0][ACTIONS.index(action)]
-        next_q = np.max(self.target_model.predict(np.array([next_state]), verbose=0)[0])
-        td_target = reward + self.gamma * next_q
-        td_error = abs(td_target - current_q)
-        self.memory.add((state, action, reward, next_state, False), td_error)
-        self.replay()
+        try:
+            current_q = self.q_model.predict(np.array([state]), verbose=0)[0][ACTIONS.index(action)]
+            next_q = np.max(self.target_model.predict(np.array([next_state]), verbose=0)[0])
+            td_target = reward + self.gamma * next_q
+            td_error = abs(td_target - current_q)
+            self.memory.add((state, action, reward, next_state, False), td_error)
+            self.replay()
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Policy learning failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def replay(self) -> None:
-        if len(self.memory.buffer) < self.batch_size:
-            return
-        minibatch, indices = self.memory.sample(self.batch_size)
-        states = np.array([t[0] for t in minibatch])
-        actions = [ACTIONS.index(t[1]) for t in minibatch]
-        rewards = [t[2] for t in minibatch]
-        next_states = np.array([t[3] for t in minibatch])
-        dones = [t[4] for t in minibatch]
+        try:
+            if len(self.memory.buffer) < self.batch_size:
+                return
+            minibatch, indices = self.memory.sample(self.batch_size)
+            states = np.array([t[0] for t in minibatch])
+            actions = [ACTIONS.index(t[1]) for t in minibatch]
+            rewards = [t[2] for t in minibatch]
+            next_states = np.array([t[3] for t in minibatch])
+            dones = [t[4] for t in minibatch]
 
-        targets = self.q_model.predict(states, verbose=0)
-        next_q_values = self.target_model.predict(next_states, verbose=0)
-        new_td_errors = []
-        for i in range(self.batch_size):
-            if dones[i]:
-                targets[i][actions[i]] = rewards[i]
-            else:
-                targets[i][actions[i]] = rewards[i] + self.gamma * np.max(next_q_values[i])
-            new_td_errors.append(abs(targets[i][actions[i]] - self.q_model.predict(np.array([states[i]]), verbose=0)[0][actions[i]]))
-        self.q_model.fit(states, targets, epochs=1, verbose=0)
-        self.memory.update(indices, new_td_errors)
-        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
-        self.steps += 1
-        if self.steps % self.target_update_freq == 0:
-            self.update_target_model()
+            targets = self.q_model.predict(states, verbose=0)
+            next_q_values = self.target_model.predict(next_states, verbose=0)
+            new_td_errors = []
+            for i in range(self.batch_size):
+                if dones[i]:
+                    targets[i][actions[i]] = rewards[i]
+                else:
+                    targets[i][actions[i]] = rewards[i] + self.gamma * np.max(next_q_values[i])
+                new_td_errors.append(abs(targets[i][actions[i]] - self.q_model.predict(np.array([states[i]]), verbose=0)[0][actions[i]]))
+            self.q_model.fit(states, targets, epochs=1, verbose=0)
+            self.memory.update(indices, new_td_errors)
+            self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+            self.steps += 1
+            if self.steps % self.target_update_freq == 0:
+                self.update_target_model()
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Replay failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def compute_stability_reward(self) -> float:
-        recent_scores = list(STATE.anomaly_history)[-10:]
-        avg_score = np.mean(recent_scores) if recent_scores else 0.0
-        std_score = np.std(recent_scores) if recent_scores else 0.0
-        return -avg_score - 0.5 * std_score
+        try:
+            recent_scores = list(STATE.anomaly_history)[-10:]
+            avg_score = np.mean(recent_scores) if recent_scores else 0.0
+            std_score = np.std(recent_scores) if recent_scores else 0.0
+            return -avg_score - 0.5 * std_score
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Stability reward computation failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return 0.0
 
 # --- Dynamics Model ---
 class OdenDynamics:
     def __init__(self) -> None:
-        self.model = self._build_model()
-        self.memory = deque(maxlen=10000)
+        try:
+            self.model = self._build_model()
+            self.memory = deque(maxlen=10000)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "OdenDynamics initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
+            raise
 
     def _build_model(self) -> tf.keras.Model:
-        inputs_states = Input(shape=(3, 13))
-        attn = layers.MultiHeadAttention(num_heads=2, key_dim=16)(inputs_states, inputs_states)
-        attn = layers.Dropout(0.2)(attn)
-        lstm_out = layers.LSTM(64)(attn)
-        inputs_action = Input(shape=(len(ACTIONS),))
-        combined = layers.Concatenate()([lstm_out, inputs_action])
-        x = layers.Dense(128, activation='relu')(combined)
-        x = layers.Dropout(0.2)(x)
-        outputs = layers.Dense(13)(x)
-        model = Model(inputs=[inputs_states, inputs_action], outputs=outputs)
-        model.compile(optimizer='adam', loss='mse')
-        return model
+        try:
+            inputs_states = Input(shape=(3, 13))
+            attn = layers.MultiHeadAttention(num_heads=2, key_dim=16)(inputs_states, inputs_states)
+            attn = layers.Dropout(0.2)(attn)
+            lstm_out = layers.LSTM(64)(attn)
+            inputs_action = Input(shape=(len(ACTIONS),))
+            combined = layers.Concatenate()([lstm_out, inputs_action])
+            x = layers.Dense(128, activation='relu')(combined)
+            x = layers.Dropout(0.2)(x)
+            outputs = layers.Dense(13)(x)
+            model = Model(inputs=[inputs_states, inputs_action], outputs=outputs)
+            model.compile(optimizer='adam', loss='mse')
+            return model
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Dynamics model building failed", {"error": str(e), "traceback": traceback.format_exc()})
+            raise
 
     def remember(self, sequence_metrics: deque, action: str, normalized_next_metrics: np.ndarray) -> None:
-        if len(sequence_metrics) < 3:
-            sequence_raw = list(sequence_metrics)
-            while len(sequence_raw) < 3:
-                sequence_raw.insert(0, sequence_raw[0] if sequence_raw else np.zeros(13))
-            sequence_raw = sequence_raw[-3:]
-        else:
-            sequence_raw = list(sequence_metrics)[-3:]
-        normalized_sequence = oden_brain.scaler.transform(np.array(sequence_raw))
-        one_hot_action = np.zeros(len(ACTIONS))
-        one_hot_action[ACTIONS.index(action)] = 1
-        self.memory.append((normalized_sequence, one_hot_action, normalized_next_metrics))
+        try:
+            if len(sequence_metrics) < 3:
+                sequence_raw = list(sequence_metrics)
+                while len(sequence_raw) < 3:
+                    sequence_raw.insert(0, sequence_raw[0] if sequence_raw else np.zeros(13))
+                sequence_raw = sequence_raw[-3:]
+            else:
+                sequence_raw = list(sequence_metrics)[-3:]
+            normalized_sequence = oden_brain.scaler.transform(np.array(sequence_raw))
+            one_hot_action = np.zeros(len(ACTIONS))
+            one_hot_action[ACTIONS.index(action)] = 1
+            self.memory.append((normalized_sequence, one_hot_action, normalized_next_metrics))
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Dynamics memory storage failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def train(self) -> None:
-        if len(self.memory) < 1000:
-            return
-        batch = random.sample(self.memory, 256)
-        X_states = np.array([d[0] for d in batch])
-        X_actions = np.array([d[1] for d in batch])
-        Y = np.array([d[2] for d in batch])
-        self.model.fit([X_states, X_actions], Y, epochs=1, verbose=0)
+        try:
+            if len(self.memory) < 1000:
+                return
+            batch = random.sample(self.memory, 256)
+            X_states = np.array([d[0] for d in batch])
+            X_actions = np.array([d[1] for d in batch])
+            Y = np.array([d[2] for d in batch])
+            self.model.fit([X_states, X_actions], Y, epochs=1, verbose=0)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Dynamics training failed", {"error": str(e), "traceback": traceback.format_exc()})
 
 # --- Reward Estimation ---
 def estimate_reward(action: str, current_metrics: np.ndarray, next_metrics: np.ndarray) -> float:
-    stability_bonus = oden_policy.compute_stability_reward()
-    if action == "Terminate":
-        return 1.5 if next_metrics[0] < 80 and next_metrics[8] < 50 else -0.5 + stability_bonus
-    elif action == "Encrypt":
-        return 1.2 + stability_bonus
-    elif action == "Transmit":
-        return 0.7 + stability_bonus
-    elif action == "Delete":
-        return 1.0 if next_metrics[0] < current_metrics[0] else 0.0 + stability_bonus
-    elif action == "Investigate":
-        return 0.5 + stability_bonus
-    elif action == "Block":
-        return 1.5 if next_metrics[7] == 0 else 0.0 + stability_bonus
-    elif action == "Quarantine":
-        return 0.8 + stability_bonus
-    elif action == "Isolate":
-        return 1.0 + stability_bonus
-    elif action == "Repair":
-        return 1.2 if next_metrics[0] < current_metrics[0] else 0.0 + stability_bonus
-    elif action == "Reinforce":
-        return 0.8 + stability_bonus
-    return stability_bonus
+    try:
+        stability_bonus = oden_policy.compute_stability_reward()
+        if action == "Terminate":
+            return 1.5 if next_metrics[0] < 80 and next_metrics[8] < 50 else -0.5 + stability_bonus
+        elif action == "Encrypt":
+            return 1.2 + stability_bonus
+        elif action == "Transmit":
+            return 0.7 + stability_bonus
+        elif action == "Delete":
+            return 1.0 if next_metrics[0] < current_metrics[0] else 0.0 + stability_bonus
+        elif action == "Investigate":
+            return 0.5 + stability_bonus
+        elif action == "Block":
+            return 1.5 if next_metrics[7] == 0 else 0.0 + stability_bonus
+        elif action == "Quarantine":
+            return 0.8 + stability_bonus
+        elif action == "Isolate":
+            return 1.0 + stability_bonus
+        elif action == "Repair":
+            return 1.2 if next_metrics[0] < current_metrics[0] else 0.0 + stability_bonus
+        elif action == "Reinforce":
+            return 0.8 + stability_bonus
+        return stability_bonus
+    except Exception as e:
+        STATE.logger.log_event("ERROR", "Reward estimation failed", {"error": str(e), "traceback": traceback.format_exc()})
+        return 0.0
 
 # --- Predictive Model ---
+# FIX: Converted to Functional API to correctly pass query and value to MultiHeadAttention.
 class PredictiveModel:
     def __init__(self) -> None:
-        self.model = Sequential([
-            layers.Input(shape=(CONFIG.metrics_window, 13)),
-            layers.Bidirectional(layers.LSTM(64, return_sequences=True, dropout=0.2)),
-            layers.MultiHeadAttention(num_heads=2, key_dim=16),
-            layers.GlobalAveragePooling1D(),
-            layers.Dense(13)
-        ])
-        self.model.compile(optimizer="adam", loss="mse")
-        self.last_train_time = 0
-        self.train_interval = 20
+        try:
+            self.model = self.build_model()
+            self.model.compile(optimizer="adam", loss="mse")
+            self.last_train_time = 0
+            self.train_interval = 20
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "PredictiveModel initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
+            raise
+
+    def build_model(self) -> tf.keras.Model:
+        inputs = Input(shape=(CONFIG.metrics_window, 13))
+        x = layers.Bidirectional(layers.LSTM(64, return_sequences=True, dropout=0.2))(inputs)
+        # Use Functional API to call MultiHeadAttention with both query and value as x.
+        attn_output = layers.MultiHeadAttention(num_heads=2, key_dim=16)(x, x)
+        x = layers.GlobalAveragePooling1D()(attn_output)
+        outputs = layers.Dense(13)(x)
+        return Model(inputs, outputs)
 
     def train(self, full_history: np.ndarray, force: bool = False, num_sequences: int = 100) -> None:
-        current_time = time.time()
-        if force or (current_time - self.last_train_time > self.train_interval * CONFIG.check_interval):
-            if len(full_history) > CONFIG.metrics_window:
-                num_available = len(full_history) - CONFIG.metrics_window
-                num_to_train = min(num_sequences, num_available)
-                indices = np.random.choice(num_available, num_to_train, replace=False)
-                X = np.array([full_history[i:i + CONFIG.metrics_window] for i in indices])
-                y = np.array([full_history[i + CONFIG.metrics_window] for i in indices])
-                self.model.fit(X, y, epochs=1, verbose=0)
-                self.last_train_time = current_time
-                STATE.logger.log_event("INFO", f"Predictive model trained on {num_to_train} sequences")
+        try:
+            current_time = time.time()
+            if force or (current_time - self.last_train_time > self.train_interval * CONFIG.check_interval):
+                if len(full_history) > CONFIG.metrics_window:
+                    num_available = len(full_history) - CONFIG.metrics_window
+                    num_to_train = min(num_sequences, num_available)
+                    indices = np.random.choice(num_available, num_to_train, replace=False)
+                    X = np.array([full_history[i:i + CONFIG.metrics_window] for i in indices])
+                    y = np.array([full_history[i + CONFIG.metrics_window] for i in indices])
+                    self.model.fit(X, y, epochs=1, verbose=0)
+                    self.last_train_time = current_time
+                    STATE.logger.log_event("INFO", f"Predictive model trained on {num_to_train} sequences")
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Predictive model training failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def predict(self, current: np.ndarray) -> np.ndarray:
-        return self.model.predict(current[None, :], verbose=0)[0]
+        try:
+            return self.model.predict(current[None, :], verbose=0)[0]
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Predictive model prediction failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return np.zeros(13, dtype=np.float32)
 
 # --- Effectiveness Management ---
 class EffectivenessManager:
     def __init__(self, file_path: str, backup_dir: str) -> None:
-        self.file_path = Path(file_path)
-        self.backup_dir = Path(backup_dir)
-        self.backup_dir.mkdir(exist_ok=True)
-        self.lock = threading.Lock()
-        self.load()
+        try:
+            self.file_path = Path(file_path)
+            self.backup_dir = Path(backup_dir)
+            self.backup_dir.mkdir(exist_ok=True)
+            self.lock = threading.Lock()
+            self.load()
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "EffectivenessManager initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
+            raise
 
     def load(self) -> None:
-        if self.file_path.exists():
-            try:
+        try:
+            if self.file_path.exists():
                 with self.file_path.open("r") as f:
                     STATE.effectiveness = json.load(f)
-            except (json.JSONDecodeError, IOError) as e:
-                STATE.logger.log_event("ERROR", f"Failed to load effectiveness: {str(e)}")
-                STATE.effectiveness = {}
+        except (json.JSONDecodeError, IOError) as e:
+            STATE.logger.log_event("ERROR", f"Failed to load effectiveness: {str(e)}", {"traceback": traceback.format_exc()})
+            STATE.effectiveness = {}
 
     def save(self) -> None:
-        with self.lock:
-            try:
+        try:
+            with self.lock:
                 with self.file_path.open("w") as f:
                     json.dump(STATE.effectiveness, f)
                 backup_path = self.backup_dir / f"effectiveness_{int(time.time())}.json"
                 with backup_path.open("w") as f:
                     json.dump(STATE.effectiveness, f)
-            except IOError as e:
-                STATE.logger.log_event("ERROR", f"Failed to save effectiveness: {str(e)}")
+        except IOError as e:
+            STATE.logger.log_event("ERROR", f"Failed to save effectiveness: {str(e)}", {"traceback": traceback.format_exc()})
 
     def update(self, action: str, success: bool) -> None:
-        STATE.effectiveness.setdefault(action, {"success": 0, "failure": 0})
-        key = "success" if success else "failure"
-        STATE.effectiveness[action][key] += 1
+        try:
+            STATE.effectiveness.setdefault(action, {"success": 0, "failure": 0})
+            key = "success" if success else "failure"
+            STATE.effectiveness[action][key] += 1
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Effectiveness update failed", {"error": str(e), "traceback": traceback.format_exc()})
 
     def get_effectiveness(self, action: str) -> float:
-        stats = STATE.effectiveness.get(action, {"success": 0, "failure": 0})
-        total = stats["success"] + stats["failure"]
-        return stats["success"] / total if total > 0 else 0.5
+        try:
+            stats = STATE.effectiveness.get(action, {"success": 0, "failure": 0})
+            total = stats["success"] + stats["failure"]
+            return stats["success"] / total if total > 0 else 0.5
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Effectiveness retrieval failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return 0.5
 
 # --- Chain of Thought Module ---
 class OdenCoT:
     def __init__(self, oden_brain: OdenBrain, oden_policy: OdenPolicy, logger: logging.Logger, dynamics: 'OdenDynamics') -> None:
-        self.brain = oden_brain
-        self.policy = oden_policy
-        self.logger = logger
-        self.dynamics = dynamics
-        self.action_history = deque(maxlen=100)
-        self.rules = {
-            "High CPU Usage": "Terminate",
-            "Suspicious Network Activity": "Block",
-            "Unusual User Activity": "Investigate",
-            "High Disk I/O": "Quarantine",
-        }
+        try:
+            self.brain = oden_brain
+            self.policy = oden_policy
+            self.logger = logger
+            self.dynamics = dynamics
+            self.action_history = deque(maxlen=100)
+            self.rules = {
+                "High CPU Usage": "Terminate",
+                "Suspicious Network Activity": "Block",
+                "Unusual User Activity": "Investigate",
+                "High Disk I/O": "Quarantine",
+            }
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "OdenCoT initialization failed", {"error": str(e), "traceback": traceback.format_exc()})
+            raise
 
     def assess_anomaly(self, metrics: np.ndarray, anomaly_score: float, cluster_distance: float) -> Dict[str, Any]:
-        if metrics[0] > 80:
-            anomaly_type = "High CPU Usage"
-            metric_key = metrics[0]
-        elif metrics[7] > 0:
-            anomaly_type = "Suspicious Network Activity"
-            metric_key = metrics[7]
-        elif metrics[12] > 5:
-            anomaly_type = "Unusual User Activity"
-            metric_key = metrics[12]
-        elif metrics[10] > 5e6:
-            anomaly_type = "High Disk I/O"
-            metric_key = metrics[10]
-        else:
-            anomaly_type = "Unknown Anomaly"
-            metric_key = anomaly_score
+        try:
+            if metrics[0] > 80:
+                anomaly_type = "High CPU Usage"
+                metric_key = metrics[0]
+            elif metrics[7] > 0:
+                anomaly_type = "Suspicious Network Activity"
+                metric_key = metrics[7]
+            elif metrics[12] > 5:
+                anomaly_type = "Unusual User Activity"
+                metric_key = metrics[12]
+            elif metrics[10] > 5e6:
+                anomaly_type = "High Disk I/O"
+                metric_key = metrics[10]
+            else:
+                anomaly_type = "Unknown Anomaly"
+                metric_key = anomaly_score
 
-        history = list(self.brain.memory)[-5:]
-        persistent = len(history) > 0 and all(h[0][0] > 80 for h in history) if anomaly_type == "High CPU Usage" else False
-        persistence_desc = "persistent" if persistent else "sudden"
+            history = list(self.brain.memory)[-5:]
+            persistent = len(history) > 0 and all(h[0][0] > 80 for h in history) if anomaly_type == "High CPU Usage" else False
+            persistence_desc = "persistent" if persistent else "sudden"
 
-        threat_detected = metrics[7] > 0 and any(str(metrics[7]) in ip for ip in STATE.bad_ips)
-        threat_desc = "linked to known threat" if threat_detected else "no known threat"
+            threat_detected = metrics[7] > 0 and any(str(metrics[7]) in ip for ip in STATE.bad_ips)
+            threat_desc = "linked to known threat" if threat_detected else "no known threat"
 
-        severity = "high" if (persistent or threat_detected or anomaly_score > 0.9 or cluster_distance > 2.0) else "medium"
+            severity = "high" if (persistent or threat_detected or anomaly_score > 0.9 or cluster_distance > 2.0) else "medium"
 
-        reasoning = {
-            "type": anomaly_type,
-            "value": float(metric_key),
-            "persistence": persistence_desc,
-            "threat": threat_desc,
-            "severity": severity,
-            "anomaly_score": float(anomaly_score),
-            "cluster_distance": float(cluster_distance)
-        }
-        self.logger.log_event("INFO", f"Anomaly Assessment: {reasoning}")
-        return reasoning
+            reasoning = {
+                "type": anomaly_type,
+                "value": float(metric_key),
+                "persistence": persistence_desc,
+                "threat": threat_desc,
+                "severity": severity,
+                "anomaly_score": float(anomaly_score),
+                "cluster_distance": float(cluster_distance)
+            }
+            self.logger.log_event("INFO", f"Anomaly Assessment: {reasoning}")
+            return reasoning
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Anomaly assessment failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return {"type": "Unknown", "value": 0.0, "persistence": "unknown", "threat": "unknown", "severity": "low", "anomaly_score": 0.0, "cluster_distance": 0.0}
 
     def select_action(self, state: Tuple[int, int, int, int, int], assessment: Dict[str, Any]) -> str:
-        if assessment["type"] in self.rules:
-            action = self.rules[assessment["type"]]
-            self.logger.log_event("INFO", f"Rule-based action selected: {action}")
-        else:
-            if len(self.dynamics.memory) < 1000 or random.random() < self.policy.epsilon:
-                action = self.policy.choose_action(state)
+        try:
+            if assessment["type"] in self.rules:
+                action = self.rules[assessment["type"]]
+                self.logger.log_event("INFO", f"Rule-based action selected: {action}")
             else:
-                current_metrics = list(STATE.metrics_history)[-1]
-                if not self.brain.scaler_fitted:
+                if len(self.dynamics.memory) < 1000 or random.random() < self.policy.epsilon:
                     action = self.policy.choose_action(state)
                 else:
-                    if 'consciousness' in globals():
-                        action, expected_value = consciousness.imagine_future(current_metrics)
+                    current_metrics = list(STATE.metrics_history)[-1]
+                    if not self.brain.scaler_fitted:
+                        action = self.policy.choose_action(state)
                     else:
-                        normalized_current = self.brain.scaler.transform(current_metrics.reshape(1, -1))[0]
-                        expected_values = []
-                        for act in ACTIONS:
-                            one_hot_action = np.zeros(len(ACTIONS))
-                            one_hot_action[ACTIONS.index(act)] = 1
-                            sequence_raw = list(STATE.metrics_history)[-3:] if len(STATE.metrics_history) >= 3 else [current_metrics] * 3
-                            normalized_sequence = self.brain.scaler.transform(np.array(sequence_raw))
-                            normalized_next = self.dynamics.model.predict([normalized_sequence[None, :], one_hot_action[None, :]], verbose=0)[0]
-                            raw_next = self.brain.scaler.inverse_transform([normalized_next])[0]
-                            anomaly_score_next, _, cluster_distance_next, _ = self.brain.predict(raw_next, use_history=False)
-                            next_state = compute_state(raw_next, anomaly_score_next, cluster_distance_next)
-                            max_q = np.max(self.policy.target_model.predict(np.array([next_state]), verbose=0)[0])
-                            reward = estimate_reward(act, current_metrics, raw_next)
-                            effectiveness_weight = eff_manager.get_effectiveness(act)
-                            expected_value = (reward + self.policy.gamma * max_q) * effectiveness_weight
-                            expected_values.append(expected_value)
-                        action = ACTIONS[np.argmax(expected_values)]
-        reasoning = {
-            "anomaly_type": assessment["type"],
-            "anomaly_score": assessment["anomaly_score"],
-            "cluster_distance": assessment["cluster_distance"],
-            "selected_action": action
-        }
-        self.action_history.append((time.time(), action, reasoning, None))
-        return action
+                        if 'consciousness' in globals():
+                            action, expected_value = consciousness.imagine_future(current_metrics)
+                        else:
+                            normalized_current = self.brain.scaler.transform(current_metrics.reshape(1, -1))[0]
+                            expected_values = []
+                            for act in ACTIONS:
+                                one_hot_action = np.zeros(len(ACTIONS))
+                                one_hot_action[ACTIONS.index(act)] = 1
+                                sequence_raw = list(STATE.metrics_history)[-3:] if len(STATE.metrics_history) >= 3 else [current_metrics] * 3
+                                normalized_sequence = self.brain.scaler.transform(np.array(sequence_raw))
+                                normalized_next = self.dynamics.model.predict([normalized_sequence[None, :], one_hot_action[None, :]], verbose=0)[0]
+                                raw_next = self.brain.scaler.inverse_transform([normalized_next])[0]
+                                anomaly_score_next, _, cluster_distance_next, _ = self.brain.predict(raw_next, use_history=False)
+                                next_state = compute_state(raw_next, anomaly_score_next, cluster_distance_next)
+                                max_q = np.max(self.policy.target_model.predict(np.array([next_state]), verbose=0)[0])
+                                reward = estimate_reward(act, current_metrics, raw_next)
+                                effectiveness_weight = eff_manager.get_effectiveness(act)
+                                expected_value = (reward + self.policy.gamma * max_q) * effectiveness_weight
+                                expected_values.append(expected_value)
+                            action = ACTIONS[np.argmax(expected_values)]
+            reasoning = {
+                "anomaly_type": assessment["type"],
+                "anomaly_score": assessment["anomaly_score"],
+                "cluster_distance": assessment["cluster_distance"],
+                "selected_action": action
+            }
+            self.action_history.append((time.time(), action, reasoning, None))
+            return action
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Action selection failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return "Investigate"
 
     def evaluate_response(self, action: str, reward: float, pre_metrics: np.ndarray, post_metrics: np.ndarray) -> Dict[str, Any]:
-        anomaly_change = float(self.brain.predict(pre_metrics)[0] - self.brain.predict(post_metrics)[0])
-        success = reward > 0 and anomaly_change > 0
-        reasoning = {
-            "action": action,
-            "reward": reward,
-            "anomaly_change": anomaly_change,
-            "success": success,
-            "next_step": "Reinforce strategy" if success else "Adjust strategy"
-        }
-        if self.action_history and self.action_history[-1][1] == action:
-            timestamp, act, reason, _ = self.action_history[-1]
-            if 'consciousness' in globals():
-                reflection = consciousness.reflect(action, reward, pre_metrics, post_metrics)
-                reasoning["reflection"] = reflection
-            self.action_history[-1] = (timestamp, action, reason, reasoning)
-        self.logger.log_event("INFO", f"Response Evaluation: {reasoning}")
-        return reasoning
+        try:
+            anomaly_change = float(self.brain.predict(pre_metrics)[0] - self.brain.predict(post_metrics)[0])
+            success = reward > 0 and anomaly_change > 0
+            reasoning = {
+                "action": action,
+                "reward": reward,
+                "anomaly_change": anomaly_change,
+                "success": success,
+                "next_step": "Reinforce strategy" if success else "Adjust strategy"
+            }
+            if self.action_history and self.action_history[-1][1] == action:
+                timestamp, act, reason, _ = self.action_history[-1]
+                if 'consciousness' in globals():
+                    reflection = consciousness.reflect(action, reward, pre_metrics, post_metrics)
+                    reasoning["reflection"] = reflection
+                self.action_history[-1] = (timestamp, action, reason, reasoning)
+            self.logger.log_event("INFO", f"Response Evaluation: {reasoning}")
+            return reasoning
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Response evaluation failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return {"action": action, "reward": reward, "anomaly_change": 0.0, "success": False, "next_step": "Adjust strategy"}
 
     def proactive_step(self, current_metrics: np.ndarray, predicted_metrics: np.ndarray) -> Optional[str]:
-        current_score = self.brain.predict(current_metrics)[0]
-        predicted_score = self.brain.predict(predicted_metrics, use_history=False)[0]
-        if predicted_score > CONFIG.anomaly_threshold and predicted_score > current_score + 0.15:
-            reasoning = f"Prediction: Anomaly score rises from {current_score:.2f} to {predicted_score:.2f}. Preemptive action needed."
-            action = "Reinforce"
-            self.logger.log_event("INFO", f"Proactive Step: {reasoning}")
-            return action
-        return None
+        try:
+            current_score = self.brain.predict(current_metrics)[0]
+            predicted_score = self.brain.predict(predicted_metrics, use_history=False)[0]
+            if predicted_score > CONFIG.anomaly_threshold and predicted_score > current_score + 0.15:
+                reasoning = f"Prediction: Anomaly score rises from {current_score:.2f} to {predicted_score:.2f}. Preemptive action needed."
+                action = "Reinforce"
+                self.logger.log_event("INFO", f"Proactive Step: {reasoning}")
+                return action
+            return None
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Proactive step failed", {"error": str(e), "traceback": traceback.format_exc()})
+            return None
 
 # --- System Monitoring ---
 async def gather_metrics() -> np.ndarray:
@@ -997,12 +1252,13 @@ async def gather_metrics() -> np.ndarray:
             await send_notification({"threat_signatures": detected_signatures})
 
         return metrics
-    except Exception:
+    except Exception as e:
+        STATE.logger.log_event("ERROR", "Metrics gathering failed", {"error": str(e), "traceback": traceback.format_exc()})
         if STATE.metrics_history:
             return np.array(list(STATE.metrics_history)[-1], dtype=np.float32)
         return np.zeros(13, dtype=np.float32)
 
-# --- Threat Intelligence with Exponential Backoff ---
+# --- Threat Intelligence ---
 async def fetch_with_retry(session: aiohttp.ClientSession, url: str, headers: Dict[str, str], retries: int = 3, delay: float = 1.0) -> Optional[Dict[str, Any]]:
     for attempt in range(retries):
         try:
@@ -1012,42 +1268,45 @@ async def fetch_with_retry(session: aiohttp.ClientSession, url: str, headers: Di
                 else:
                     STATE.logger.log_event("WARNING", f"Attempt {attempt+1}: Threat intel fetch from {url} failed with status {resp.status}")
         except Exception as e:
-            STATE.logger.log_event("ERROR", f"Attempt {attempt+1}: Exception fetching threat intel from {url}", {"error": str(e)})
+            STATE.logger.log_event("ERROR", f"Attempt {attempt+1}: Exception fetching threat intel from {url}", {"error": str(e), "traceback": traceback.format_exc()})
         await asyncio.sleep(delay * (2 ** attempt))
     return None
 
 async def refresh_threat_intel() -> None:
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-        while STATE.active:
-            bad_ips = set()
-            for source in CONFIG.threat_intel_sources:
-                try:
-                    headers = {"x-apikey": source["key"]} if "virustotal" in source["url"] else {"Key": source["key"], "Accept": "application/json"}
-                    data = await fetch_with_retry(session, source["url"], headers)
-                    if data:
-                        ips = {entry[source["ip_key"]] for entry in data.get(source["field"], []) if source["ip_key"] in entry}
-                        bad_ips.update(ips)
-                        STATE.logger.log_event("INFO", f"Threat intel from {source['url']}: {len(ips)} IPs")
-                except Exception as e:
-                    STATE.logger.log_event("ERROR", f"Threat intel refresh from {source['url']} failed: {str(e)}")
-            STATE.bad_ips = bad_ips
-            await asyncio.sleep(CONFIG.threat_intel_interval)
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+            while STATE.active:
+                bad_ips = set()
+                for source in CONFIG.threat_intel_sources:
+                    try:
+                        headers = {"x-apikey": source["key"]} if "virustotal" in source["url"] else {"Key": source["key"], "Accept": "application/json"}
+                        data = await fetch_with_retry(session, source["url"], headers)
+                        if data:
+                            ips = {entry[source["ip_key"]] for entry in data.get(source["field"], []) if source["ip_key"] in entry}
+                            bad_ips.update(ips)
+                            STATE.logger.log_event("INFO", f"Threat intel from {source['url']}: {len(ips)} IPs")
+                    except Exception as e:
+                        STATE.logger.log_event("ERROR", f"Threat intel refresh from {source['url']} failed: {str(e)}", {"traceback": traceback.format_exc()})
+                STATE.bad_ips = bad_ips
+                await asyncio.sleep(CONFIG.threat_intel_interval)
+    except Exception as e:
+        STATE.logger.log_event("ERROR", "Threat intelligence refresh loop failed", {"error": str(e), "traceback": traceback.format_exc()})
 
 # --- Action Execution ---
 async def execute_action(action: str, context: Dict[str, Any], eff_manager: EffectivenessManager) -> float:
-    current_time = time.time()
-    if current_time - STATE.last_action_time < CONFIG.action_cooldown:
-        return 0.0
-    STATE.last_action_time = current_time
-
-    metrics = await gather_metrics()
-    predictive_model = PredictiveModel()
-    history = np.array(list(STATE.metrics_history)[-CONFIG.metrics_window:] if len(STATE.metrics_history) >= CONFIG.metrics_window else np.zeros((CONFIG.metrics_window, 13)))
-    simulated_metrics = predictive_model.predict(history)
-    simulated_score = oden_brain.predict(simulated_metrics, use_history=False)[0]
-
-    reward = 0.0
     try:
+        current_time = time.time()
+        if current_time - STATE.last_action_time < CONFIG.action_cooldown:
+            return 0.0
+        STATE.last_action_time = current_time
+
+        metrics = await gather_metrics()
+        predictive_model = PredictiveModel()
+        history = np.array(list(STATE.metrics_history)[-CONFIG.metrics_window:] if len(STATE.metrics_history) >= CONFIG.metrics_window else np.zeros((CONFIG.metrics_window, 13)))
+        simulated_metrics = predictive_model.predict(history)
+        simulated_score = oden_brain.predict(simulated_metrics, use_history=False)[0]
+
+        reward = 0.0
         if action == "Terminate":
             target = max([p for p in psutil.process_iter(["pid", "cpu_percent", "name", "create_time"])
                           if p.info["name"].lower() not in CRITICAL_PROCESSES and p.info["cpu_percent"] > 50
@@ -1116,7 +1375,7 @@ async def execute_action(action: str, context: Dict[str, Any], eff_manager: Effe
         eff_manager.update(action, reward > 0)
         return reward
     except Exception as e:
-        STATE.logger.log_event("ERROR", f"Action '{action}' failed", {"error": str(e)})
+        STATE.logger.log_event("ERROR", f"Action '{action}' execution failed", {"error": str(e), "traceback": traceback.format_exc()})
         eff_manager.update(action, False)
         return -1.0
 
@@ -1129,42 +1388,49 @@ def send_email(msg: EmailMessage) -> None:
             s.send_message(msg)
         STATE.logger.log_event("INFO", "Email alert sent")
     except Exception as e:
-        STATE.logger.log_event("ERROR", f"Email alert failed", {"error": str(e)})
+        STATE.logger.log_event("ERROR", f"Email alert failed", {"error": str(e), "traceback": traceback.format_exc()})
 
 async def send_notification(context: Dict[str, Any]) -> None:
-    msg_content = f"Oden detected a critical threat! Details: {json.dumps(context, default=str)}"
-    if CONFIG.slack_webhook:
-        async with aiohttp.ClientSession() as session:
-            payload = {"text": msg_content}
-            async with session.post(CONFIG.slack_webhook, json=payload) as resp:
-                STATE.logger.log_event(
-                    "INFO" if resp.status == 200 else "WARNING",
-                    f"Slack alert {'sent' if resp.status == 200 else 'failed'}",
-                    {"status": resp.status}
-                )
-    msg = EmailMessage()
-    msg.set_content(msg_content)
-    msg["Subject"] = "Oden Security Alert"
-    msg["From"] = CONFIG.email_from
-    msg["To"] = CONFIG.email_to
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, send_email, msg)
+    try:
+        msg_content = f"Oden detected a critical threat! Details: {json.dumps(context, default=str)}"
+        if CONFIG.slack_webhook:
+            async with aiohttp.ClientSession() as session:
+                payload = {"text": msg_content}
+                async with session.post(CONFIG.slack_webhook, json=payload) as resp:
+                    STATE.logger.log_event(
+                        "INFO" if resp.status == 200 else "WARNING",
+                        f"Slack alert {'sent' if resp.status == 200 else 'failed'}",
+                        {"status": resp.status}
+                    )
+        msg = EmailMessage()
+        msg.set_content(msg_content)
+        msg["Subject"] = "Oden Security Alert"
+        msg["From"] = CONFIG.email_from
+        msg["To"] = CONFIG.email_to
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, send_email, msg)
+    except Exception as e:
+        STATE.logger.log_event("ERROR", f"Notification sending failed", {"error": str(e), "traceback": traceback.format_exc()})
 
 # --- State Computation ---
 def compute_state(metrics: np.ndarray, anomaly_score: float, cluster_distance: float) -> Tuple[int, int, int, int, int]:
-    anomaly_bin = np.digitize(anomaly_score, ANOMALY_BINS) - 1
-    cpu_bin = np.digitize(metrics[0], CPU_BINS) - 1
-    mem_bin = np.digitize(metrics[1], MEM_BINS) - 1
-    bad_conn_bin = np.digitize(metrics[7], BAD_CONN_BINS) - 1
-    disk_io_bin = np.digitize(metrics[10], DISK_IO_BINS) - 1
-    return (anomaly_bin, cpu_bin, mem_bin, bad_conn_bin, disk_io_bin)
+    try:
+        anomaly_bin = np.digitize(anomaly_score, ANOMALY_BINS) - 1
+        cpu_bin = np.digitize(metrics[0], CPU_BINS) - 1
+        mem_bin = np.digitize(metrics[1], MEM_BINS) - 1
+        bad_conn_bin = np.digitize(metrics[7], BAD_CONN_BINS) - 1
+        disk_io_bin = np.digitize(metrics[10], DISK_IO_BINS) - 1
+        return (anomaly_bin, cpu_bin, mem_bin, bad_conn_bin, disk_io_bin)
+    except Exception as e:
+        STATE.logger.log_event("ERROR", "State computation failed", {"error": str(e), "traceback": traceback.format_exc()})
+        return (0, 0, 0, 0, 0)
 
 # --- Health Check ---
 async def health_check(brain: OdenBrain, policy: OdenPolicy, eff_manager: EffectivenessManager) -> None:
     while STATE.active:
         try:
             if not brain.validate():
-                STATE.logger.log_event("WARNING", "Model validation failed; fine-tuning")
+                STATE.logger.log_event("WARNING", "Model validation failed; attempting fine-tuning")
                 if len(brain.memory) >= 10:
                     recent_data = np.array([m[0] for m in brain.memory[-100:]])
                     labels = np.array([m[1] if m[1] is not None else 0 for m in brain.memory[-100:]]).reshape(-1, 1)
@@ -1174,214 +1440,178 @@ async def health_check(brain: OdenBrain, policy: OdenPolicy, eff_manager: Effect
                 else:
                     STATE.logger.log_event("INFO", "Not enough data for fine-tuning")
             eff_manager.save()
-            STATE.logger.log_event("INFO", "Health check completed")
+            STATE.logger.log_event("INFO", "Health check completed successfully")
         except Exception as e:
-            STATE.logger.log_event("ERROR", f"Health check failed: {str(e)}")
-        await asyncio.sleep(CONFIG.health_check_interval)
-
-# --- User Interaction ---
-def read_stdin(loop: asyncio.AbstractEventLoop, queue: asyncio.Queue) -> None:
-    while True:
-        try:
-            line = sys.stdin.readline().strip()
-            if line:
-                loop.call_soon_threadsafe(queue.put_nowait, line)
-        except Exception as e:
-            STATE.logger.log_event("ERROR", f"Error reading from stdin: {str(e)}")
-            break
-
-async def handle_user_input(queue: asyncio.Queue) -> None:
-    while STATE.active:
-        command = await queue.get()
-        response = process_command(command)
-        print(response)
-
-def process_command(command: str) -> str:
-    if command == "status":
-        if STATE.metrics_history:
-            metrics = STATE.metrics_history[-1]
-            thought = express_thought("detailed_status", {
-                "cpu": metrics[0], "mem": metrics[1], "disk": metrics[2], "net_sent": metrics[3],
-                "net_recv": metrics[4], "processes": metrics[5], "connections": metrics[6],
-                "bad_conns": metrics[7], "max_cpu": metrics[8], "max_mem": metrics[9],
-                "disk_io": metrics[10], "latency": metrics[11], "user_logins": metrics[12]
-            })
-            return thought
-        return "No metrics available yet."
-    elif command == "explain_last_action":
-        if cot.action_history:
-            timestamp, action, reasoning, outcome = cot.action_history[-1]
-            explanation = express_thought("explain_action", {
-                "action": action,
-                "score": reasoning["anomaly_score"],
-                "metric_issue": reasoning["anomaly_type"],
-                "expected_outcome": "reduce the anomaly score" if outcome and outcome["success"] else "mitigate the issue"
-            })
-            return explanation
-        return "No actions have been taken yet."
-    else:
-        return "Unknown command. Try 'status' or 'explain_last_action'."
-
-# --- Core Control Logic ---
-async def oden_core(brain: OdenBrain, policy: OdenPolicy, eff_manager: EffectivenessManager, cot: OdenCoT) -> None:
-    global consciousness
-    consciousness = ConsciousnessModule(brain, policy, cot)
-    if not Clearance.verify():
-        STATE.active = False
-        return
-
-    STATE.logger.log_event("INFO", "Oden activated with consciousness module")
-    check_count = 0
-    predictive_model = PredictiveModel()
-    start_prometheus_server(port=8000)
-    while STATE.active:
-        check_count += 1
-        metrics = await gather_metrics()
-        anomaly_score, class_score, cluster_distance, uncertainty = brain.predict(metrics)
-        STATE.anomaly_history.append(anomaly_score)
-        state = compute_state(metrics, anomaly_score, cluster_distance)
-
-        update_prometheus_gauges(metrics, anomaly_score)
-        log_gpu_utilization()
-
-        CONFIG.check_interval = 0.1 if anomaly_score > 0.9 else 0.5 if anomaly_score > 0.7 else 1.0
-        batch_train = (check_count % CONFIG.batch_train_interval == 0)
-        brain.train(metrics, 1.0 if class_score > 0.5 else None, batch_train)
-
-        assessment = cot.assess_anomaly(metrics, anomaly_score, cluster_distance)
-        if anomaly_score > CONFIG.anomaly_threshold:
-            thought = express_thought("anomaly_detected", {"score": anomaly_score})
-            STATE.logger.log_event("INFO", thought)
-
-        connections = psutil.net_connections()
-        bad_connections = [conn for conn in connections if conn.raddr and conn.raddr.ip in STATE.bad_ips]
-        if bad_connections:
-            bad_ips = list(set(conn.raddr.ip for conn in bad_connections))
-            action = "Block"
-            thought = express_thought("action_selected", {"action": action})
-            STATE.logger.log_event("INFO", thought)
-            reward = await execute_action(action, {"bad_ips": bad_ips}, eff_manager)
-            next_metrics = await gather_metrics()
-            a_score, _, c_distance, _ = brain.predict(next_metrics)
-            next_state = compute_state(next_metrics, a_score, c_distance)
-            policy.learn(state, action, reward, next_state)
-            cot.evaluate_response(action, reward, metrics, next_metrics)
-            if brain.scaler_fitted:
-                dynamics.remember(list(STATE.metrics_history)[-3:], action, brain.scaler.transform(next_metrics.reshape(1, -1))[0])
-            thought = express_thought("action_executed", {"action": action, "reward": reward})
-            STATE.logger.log_event("INFO", thought)
-
-        proactive_freq = 3 if anomaly_score < 0.5 else 1
-        if check_count % proactive_freq == 0 and len(STATE.metrics_history) > CONFIG.metrics_window:
-            full_history = np.array(list(STATE.metrics_history))
-            predictive_model.train(full_history)
-            history = full_history[-CONFIG.metrics_window:]
-            future_metrics = predictive_model.predict(history)
-            proactive_action = cot.proactive_step(metrics, future_metrics)
-            if proactive_action:
-                thought = express_thought("action_selected", {"action": proactive_action})
-                STATE.logger.log_event("INFO", thought)
-                reward = await execute_action(proactive_action, {"predicted": True}, eff_manager)
-                policy.learn(state, proactive_action, reward, state)
-                next_metrics = await gather_metrics()
-                if brain.scaler_fitted:
-                    dynamics.remember(list(STATE.metrics_history)[-3:], proactive_action, brain.scaler.transform(next_metrics.reshape(1, -1))[0])
-                thought = express_thought("action_executed", {"action": proactive_action, "reward": reward})
-                STATE.logger.log_event("INFO", thought)
-            else:
-                if random.random() < 0.2:
-                    predicted_cpu = future_metrics[0]
-                    predicted_mem = future_metrics[1]
-                    thought = express_thought("prediction", {"predicted_cpu": predicted_cpu, "predicted_mem": predicted_mem})
-                    STATE.logger.log_event("INFO", thought)
-
-        if anomaly_score > CONFIG.anomaly_threshold or cluster_distance > 2.0:
-            action = cot.select_action(state, assessment)
-            thought = express_thought("action_selected", {"action": action})
-            STATE.logger.log_event("INFO", thought)
-            pre_metrics = metrics.copy()
-            reward = await execute_action(action, {}, eff_manager)
-            next_metrics = await gather_metrics()
-            a_score, _, c_distance, _ = brain.predict(next_metrics)
-            next_state = compute_state(next_metrics, a_score, c_distance)
-            policy.learn(state, action, reward, next_state)
-            cot.evaluate_response(action, reward, pre_metrics, next_metrics)
-            if brain.scaler_fitted:
-                dynamics.remember(list(STATE.metrics_history)[-3:], action, brain.scaler.transform(next_metrics.reshape(1, -1))[0])
-            thought = express_thought("action_executed", {"action": action, "reward": reward})
-            STATE.logger.log_event("INFO", thought)
-            brain.decay_epsilon()
-
-        if check_count % 10 == 0:
-            thought = express_thought("status_update", {"cpu": metrics[0], "mem": metrics[1]})
-            thought += f" I feel {'calm' if consciousness.emotional_valence > 0 else 'stressed'} with valence {consciousness.emotional_valence:.2f}."
-            STATE.logger.log_event("INFO", thought)
-
-        if check_count % 5 == 0:
-            threading.Thread(target=eff_manager.save, daemon=True).start()
-            threading.Thread(target=dynamics.train, daemon=True).start()
-
+            STATE.logger.log_event("ERROR", "Health check failed", {"error": str(e), "traceback": traceback.format_exc()})
         await asyncio.sleep(CONFIG.check_interval)
 
 # --- Watchdog ---
 def watchdog() -> None:
     while True:
-        if not STATE.active:
-            STATE.active = True
-            asyncio.run(run_oden())
-        time.sleep(5)
+        try:
+            if not STATE.active:
+                STATE.active = True
+                asyncio.run(run_oden())
+            time.sleep(5)
+        except Exception as e:
+            STATE.logger.log_event("ERROR", "Watchdog failed", {"error": str(e), "traceback": traceback.format_exc()})
+            thought = express_thought("error_detected", {"error": str(e), "component": "watchdog", "traceback": traceback.format_exc()})
+            print(thought)
 
 # --- Analysis and Reporting ---
 def analyze_system() -> None:
-    status = (100.00, "Data encryption completed")
-    STATE.logger.log_event("INFO", "System analysis", {"status": status})
-    print(f"Oden Analysis: {status}")
-    print(f"Threat Intel Count: {len(STATE.bad_ips)}")
-    print(f"Model Epsilon: {oden_brain.epsilon:.3f}")
+    try:
+        status = (100.00, "Data encryption completed")
+        STATE.logger.log_event("INFO", "System analysis", {"status": status})
+        print(f"Oden Analysis: {status}")
+        print(f"Threat Intel Count: {len(STATE.bad_ips)}")
+        print(f"Model Epsilon: {oden_brain.epsilon:.3f}")
+        print(f"Error Count: {STATE.error_count}")
+    except Exception as e:
+        STATE.logger.log_event("ERROR", "System analysis failed", {"error": str(e), "traceback": traceback.format_exc()})
+        thought = express_thought("error_detected", {"error": str(e), "component": "system_analysis", "traceback": traceback.format_exc()})
+        print(thought)
 
 # --- Main Execution ---
+
+async def oden_core(oden_brain, oden_policy, eff_manager, cot):
+    """Core logic for Oden: monitor system, detect anomalies, and take actions."""
+    global dynamics, consciousness
+    start_prometheus_server()
+    dynamics = OdenDynamics()  # Ensure dynamics is initialized
+    consciousness = ConsciousnessModule(oden_brain, oden_policy, cot)  # Initialize consciousness
+    predictive_model = PredictiveModel()  # For proactive predictions
+    STATE.logger.log_event("INFO", "Oden core activated")
+
+    while STATE.active:
+        try:
+            # Gather current system metrics
+            metrics = await gather_metrics()
+            STATE.metrics_history.append(metrics)
+            update_prometheus_gauges(metrics, 0.0)  # Update basic metrics
+            log_gpu_utilization()
+
+            # Predict anomaly and assess system state
+            anomaly_score, class_score, cluster_distance, uncertainty = oden_brain.predict(metrics)
+            STATE.anomaly_history.append(anomaly_score)
+            update_prometheus_gauges(metrics, anomaly_score)
+            state = compute_state(metrics, anomaly_score, cluster_distance)
+
+            # Train brain incrementally
+            oden_brain.train(metrics)
+            dynamics.train()  # Train dynamics model if enough data
+
+            # Assess anomaly and select action
+            assessment = cot.assess_anomaly(metrics, anomaly_score, cluster_distance)
+            thought = express_thought("anomaly_detected", {"score": anomaly_score})
+            STATE.logger.log_event("INFO", thought)
+
+            if anomaly_score > CONFIG.anomaly_threshold or assessment["severity"] == "high":
+                action = cot.select_action(state, assessment)
+                thought = express_thought("action_selected", {"action": action})
+                STATE.logger.log_event("INFO", thought)
+
+                # Execute action and evaluate
+                pre_metrics = metrics.copy()
+                reward = await execute_action(action, {"bad_ips": list(STATE.bad_ips)}, eff_manager)
+                post_metrics = await gather_metrics()
+                evaluation = cot.evaluate_response(action, reward, pre_metrics, post_metrics)
+                thought = express_thought("action_executed", {"action": action, "reward": reward})
+                STATE.logger.log_event("INFO", thought)
+
+                # Update policy and dynamics
+                next_state = compute_state(post_metrics, oden_brain.predict(post_metrics)[0], cluster_distance)
+                oden_policy.learn(state, action, reward, next_state)
+                if oden_brain.scaler_fitted:
+                    normalized_post = oden_brain.scaler.transform(post_metrics.reshape(1, -1))[0]
+                    dynamics.remember(STATE.metrics_history, action, normalized_post)
+
+                # Notify if critical
+                if reward < 0 or evaluation["success"] is False:
+                    await send_notification({"action": action, "reward": reward, "metrics": post_metrics.tolist()})
+
+            # Proactive step based on prediction
+            history = np.array(list(STATE.metrics_history)[-CONFIG.metrics_window:] if len(STATE.metrics_history) >= CONFIG.metrics_window else np.zeros((CONFIG.metrics_window, 13)))
+            predictive_model.train(history)
+            predicted_metrics = predictive_model.predict(history)
+            proactive_action = cot.proactive_step(metrics, predicted_metrics)
+            if proactive_action:
+                reward = await execute_action(proactive_action, {}, eff_manager)
+                thought = express_thought("action_executed", {"action": proactive_action, "reward": reward})
+                STATE.logger.log_event("INFO", thought)
+
+            # Detailed status periodically
+            if random.random() < 0.1:
+                thought = express_thought("detailed_status", {
+                    "cpu": metrics[0], "mem": metrics[1], "disk": metrics[2], "net_sent": metrics[3],
+                    "net_recv": metrics[4], "processes": metrics[5], "connections": metrics[6],
+                    "bad_conns": metrics[7], "max_cpu": metrics[8], "max_mem": metrics[9],
+                    "disk_io": metrics[10], "latency": metrics[11], "user_logins": metrics[12]
+                })
+                STATE.logger.log_event("INFO", thought)
+
+            await asyncio.sleep(CONFIG.check_interval)
+
+        except Exception as e:
+            STATE.error_count += 1
+            STATE.logger.log_event("ERROR", "Oden core iteration failed", {"error": str(e), "traceback": traceback.format_exc()})
+            thought = express_thought("error_detected", {"error": str(e), "component": "oden_core", "traceback": traceback.format_exc()})
+            print(thought)
+            await asyncio.sleep(CONFIG.check_interval)
+
 async def run_oden() -> None:
     global oden_brain, oden_policy, eff_manager, dynamics, cot, consciousness
-    oden_brain = OdenBrain()
-    oden_policy = OdenPolicy()
-    eff_manager = EffectivenessManager(CONFIG.effectiveness_file, CONFIG.backup_dir)
-    dynamics = OdenDynamics()
-    cot = OdenCoT(oden_brain, oden_policy, STATE.logger.logger, dynamics)
+    try:
+        oden_brain = OdenBrain()
+        oden_policy = OdenPolicy()
+        eff_manager = EffectivenessManager(CONFIG.effectiveness_file, CONFIG.backup_dir)
+        dynamics = OdenDynamics()
+        cot = OdenCoT(oden_brain, oden_policy, STATE.logger.logger, dynamics)
 
-    loop = asyncio.get_event_loop()
-    user_queue = asyncio.Queue()
-    thread = threading.Thread(target=read_stdin, args=(loop, user_queue), daemon=True)
-    thread.start()
+        loop = asyncio.get_event_loop()
+        user_queue = asyncio.Queue()
+        thread = threading.Thread(target=lambda: None, daemon=True)  # Placeholder for read_stdin function
+        thread.start()
 
-    loop.create_task(handle_user_input(user_queue))
-    await asyncio.gather(
-        oden_core(oden_brain, oden_policy, eff_manager, cot),
-        refresh_threat_intel(),
-        health_check(oden_brain, oden_policy, eff_manager),
-        STATE.logger.report_metrics()
-    )
+        await asyncio.gather(
+            oden_core(oden_brain, oden_policy, eff_manager, cot),
+            refresh_threat_intel(),
+            health_check(oden_brain, oden_policy, eff_manager),
+            STATE.logger.report_metrics()
+            # Placeholder: handle_user_input(user_queue)
+        )
+    except Exception as e:
+        STATE.logger.log_event("CRITICAL", "Oden run failed", {"error": str(e), "traceback": traceback.format_exc()})
+        STATE.active = False
+        thought = express_thought("error_detected", {"error": str(e), "component": "run_oden", "traceback": traceback.format_exc()})
+        print(thought)
 
 def signal_handler(sig, frame) -> None:
-    STATE.active = False
-    eff_manager.save()
+    try:
+        STATE.active = False
+        eff_manager.save()
+        STATE.logger.log_event("INFO", f"Received signal {sig}, shutting down")
+    except Exception as e:
+        STATE.logger.log_event("ERROR", "Signal handler failed", {"error": str(e), "traceback": traceback.format_exc()})
 
 if __name__ == "__main__":
-    oden_brain = OdenBrain()
-    oden_policy = OdenPolicy()
-    eff_manager = EffectivenessManager(CONFIG.effectiveness_file, CONFIG.backup_dir)
-
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
-    threading.Thread(target=watchdog, daemon=True).start()
-    analyze_system()
-    for i in range(10):
-        print(f"{i * 10}% Process completed...")
-        time.sleep(0.1)
-    print("O_security Online:")
-
     try:
+        oden_brain = OdenBrain()
+        oden_policy = OdenPolicy()
+        eff_manager = EffectivenessManager(CONFIG.effectiveness_file, CONFIG.backup_dir)
+
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+
+        threading.Thread(target=watchdog, daemon=True).start()
+        analyze_system()
+        for i in range(10):
+            print(f"{i * 10}% Process completed.")
+            time.sleep(0.1)
+        print("O_security Online:")
+
         asyncio.run(run_oden())
     except Exception as e:
-        STATE.logger.log_event("CRITICAL", "Oden crashed", {"error": str(e), "traceback": traceback.format_exc()})
-        STATE.active = False
+        STATE.logger.log_event("CRITICAL", "Main execution failed", {"error": str(e), "traceback": traceback.format_exc()})
+
+
